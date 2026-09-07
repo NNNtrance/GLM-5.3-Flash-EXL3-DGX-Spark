@@ -1,4 +1,12 @@
 #!/bin/bash
+#
+# HISTORY ONLY -- this is the CANDIDATE-B prelude (5-6 September 2026).
+# The prelude the two-node recipe runs is tracks/tp2/patches/tp2full-prelude.sh,
+# which adds the sparse-indexer workspace bound (candidate C), the vision block
+# and the two backports (candidate D).  This copy is kept because earlier arms
+# in docs/15 section 3 ran it; do NOT install it.  A patch tree's prelude text is
+# hashed into the fast-load sidecar identity, so the two are not interchangeable.
+#
 # In-container prelude for GLM-5.3-Flash EXL3 at TP=2 -- PRODUCTION CANDIDATE ARM.
 #
 # This is the two-node counterpart of tp3full/tp3-prelude.sh. It runs the same

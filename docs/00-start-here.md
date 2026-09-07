@@ -127,7 +127,7 @@ And the directories:
 | Directory | Applies to | Note |
 |---|---|---|
 | [`bench/`](../bench/) | **both tracks** | Model-free, engine down. Most of it runs on one node |
-| [`scripts/`](../scripts/) | **one launcher per track, both here** | `start-tp3.sh` + `tp3-prelude.sh` and `start-tp2full.sh` + `tp2-prelude.sh`. The benchmark harness, the probes and the prompt sets beside them are identical at either rank count |
+| [`scripts/`](../scripts/) | **one launcher per track, both here** | `start-tp3.sh` and `start-tp2full.sh`. The benchmark harness, the probes and the prompt sets beside them are identical at either rank count. The **preludes each track actually runs** live inside their patch trees (`tracks/*/patches/`), because a tree's file list and its prelude text are the fast-load sidecar's identity; the `*-prelude.sh` copies here are earlier arms kept as history |
 | [`patches/kernel/`](../patches/kernel/) | **both tracks** | The mesh plugin patches. `0005` is a no-op with one cable per pair |
 | [`patches/dflash2-port/`](../patches/dflash2-port/) | **both tracks** | The drafter port into the image |
 | [`patches/indexer-overlay/`](../patches/indexer-overlay/) | **both tracks** | The GB10 top-k overlay. Mandatory at any node count |

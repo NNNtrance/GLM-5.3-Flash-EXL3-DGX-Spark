@@ -30,7 +30,7 @@ finished env file between nodes ([envs/README.md](../../envs/README.md)).
 
 | | |
 |---|---|
-| The launcher and prelude | [`scripts/start-tp2full.sh`](../../scripts/start-tp2full.sh) and [`scripts/tp2-prelude.sh`](../../scripts/tp2-prelude.sh) — every launcher in this repository lives in `scripts/`, one per track, so the harness and the probes sit beside them |
+| The launcher | [`scripts/start-tp2full.sh`](../../scripts/start-tp2full.sh) — every launcher in this repository lives in `scripts/`, one per track, so the harness and the probes sit beside them. **The prelude does not**: it is [`patches/tp2full-prelude.sh`](patches/tp2full-prelude.sh), inside the tree, because the tree's file list *and the full text of the prelude* are the fast-load sidecar's identity ([docs/08](../../docs/08-fast-boot.md) §4). `scripts/tp2-prelude.sh` is the **candidate-B era** copy and is kept as history only; it does not carry the indexer workspace bound, the vision block or the two backports. Two copies of a file are a coin flip unless something checks, and that one had already drifted |
 | The `tp`-agnostic patches | [`patches/tp3/`](../../patches/tp3/) — `patch-swblock-tp3.py`, `patch-kvdiag-tp3.py`, `patch-draftkv-tp3.py`, `patch-epfilter-tp3.py` and `patch-fastload-tp3.py` are all gated on their own environment knobs and are used unchanged at two ranks |
 | The mesh plugin patches | [`patches/kernel/`](../../patches/kernel/) — with one cable per pair set `NCCL_MESH_LINKS_PER_PEER=1`, which makes `0005` a no-op; `0006` is worth measuring either way |
 | The GB10 top-k overlay | [`patches/indexer-overlay/`](../../patches/indexer-overlay/) — **mandatory**, and the failure that stopped our very first TP=2 boot |
