@@ -11,6 +11,76 @@ rounds, which is what the persisted MLA tuner cache bought — see
 
 ---
 
+## 2026-09-08 (two nodes) — The two-node recipe catches up: the tower, both backports, and a block that is 4,608 tokens wide
+
+**The TP=2 track's recommended configuration is now candidate D**: candidate C plus the **vision
+tower** (4 images + 2 videos per request) and both upstream backports (`HAREM_PREFIX_HIT=1`,
+`HAREM_KPOOL_TAIL_FIX=1`). Memory rung, checkpoint, image, kernels and every other setting are
+candidate C's, untouched. [docs/15](docs/15-tp2-track.md) §5.10,
+[docs/19](docs/19-vision-at-two-ranks.md), [`results/gates/tp2-candidate-d.md`](results/gates/tp2-candidate-d.md).
+
+**Speed, one boot, medians of three rounds** `[measured-here]`: C1 **59.45** aggregate / 64.45 per
+stream against candidate C's 60.08 / 65.96, C8 **155.47** against 157.71, fresh prefill **1,413**
+against 1,414, TTFT and draft acceptance unchanged. Nothing outside a band in either direction.
+Gates: probe 10/10, code exam 12/12 first try, tool-call 8/8, needle-lite **6/6 three times**.
+
+**Six vision gates, all passing**, including **4 images + 2 videos in one request** (5,991 prompt
+tokens, all six items described) and a third video refused with HTTP 400 while the engine stays up.
+`HAREM-VISION: tower loaded, data_parallel=True, EXL3 linears=99, unquantized linears=0` at two
+ranks, and the EXL3 module audit reads **302 EXL3 / 113 bf16** against candidate B's 203/113 — the
+difference is the tower's 99.
+
+**The number the three-node handover asked to be measured rather than copied: the prefix-cache block
+is 4,608 tokens at two ranks, not 3,328.** gcd(4,608, 55,296). And at that granularity the defect is
+worse than at three ranks rather than milder, which is the entry's most useful line: an 8,008-token
+exact repeat reads **0.0 %** out of the cache with the knobs off and **57.54 %** with them on — which
+is **100 % of the ceiling**, because one block is the whole hit available at that length. Repeat TTFT
+5.60 s → **2.55 s**. Three ranks lost 41.56 points of 83.12; two ranks lose all 57.54. The A/B is one
+environment line on the same tree and the same sidecar, so the KV difference between the arms
+(−0.28 %) also says the backports are free.
+
+**The cached-path equality test at two ranks: 24/24.** 24 prompts at ~11K, ~83K and ~177K tokens,
+each asked cold then repeated byte-for-byte with the cache counters read either side: **all 24 repeat
+answers byte-identical to their cold answers and correct on both passes**, mean repeat hit 91.7 %
+against 0.0 % cold, every size class on its ceiling.
+
+**What it cost.** KV pool **2,692,857 → 2,585,714, −4.0 %** — and the A/B above attributes that to
+the tower rather than to the backports. Written down as a cost and not as noise, because candidate D
+has one boot and candidate C's boot-to-boot spread at two ranks was never measured. One dump boot
+(1,013 s) and a sidecar that grows 78 → 79 GB per rank. Boot through the autostart unit **280 s**,
+the first time that unit has brought up the configuration this track recommends.
+
+**Two findings that cost a boot each and are now written down so they cost nobody else one.**
+
+1. **The vision patch needs a file the two-node tree deliberately did not ship.**
+   `patch-vision-tp3.py`'s VS1 anchor is written against the text `patch-vllm-tp3.py`'s edit 4b
+   leaves behind, and [docs/15](docs/15-tp2-track.md) §2.3 listed that file under *not shipped*
+   because its padding half is a no-op at TP≤2. Forking the vision patch was rejected — it sits in
+   three-node production, its sha256 is printed in that boot log and its content is hashed into that
+   sidecar's identity — so the two-node tree now carries the same file, byte for byte. The tree is
+   **eighteen** files rather than fourteen. [docs/19](docs/19-vision-at-two-ranks.md) §2 `[retracted]`
+   against §5b's "the same VS1/VS2/VS3 … nothing else".
+2. **A two-node boot dies on the drafter, four minutes in**, because the three-node 32/8 → 36/9 pad
+   is applied by rewriting `config.json` **inside the shared drafter directory**. Nine key-value
+   heads do not divide by two: `qwen3_dflash.py:186 assert self.total_num_kv_heads % tp_size == 0`.
+   The fix is a directory with the unpadded config and a hard link to the same weights, built
+   **before** the dump boot. New [docs/14](docs/14-troubleshooting.md) §10.5.
+
+**Two instrument notes.** `prefill-7k.py` stops being a prefill measurement once `HAREM_PREFIX_HIT=1`
+is on — it times the second copy of one prompt and read **2,602 tok/s** against a fresh-prompt 1,413.
+And one of our own fresh-prefill readings (1,120 tok/s) was taken while a second probe was hitting
+the same engine; alone it reads 1,413 and 1,403. Both are recorded rather than dropped.
+
+**Host memory in the worst case**, which is what the swap rule actually asks about: a 4-image +
+2-video request fired during a C8 sweep. Rank 0's `MemAvailable` floor **4.90 GiB**, swap flat at
+0.059 GiB, **zero pages in or out**; the text arm ran at 141.03 tok/s against 155.47 alone, −9.3 %,
+which is queue contention and is named as such. No error, no slowdown outside that, safe zone intact.
+
+**Not measured**: the tower *sliced* across the two ranks (new [HELP-WANTED](HELP-WANTED.md) §13), a
+second boot of candidate D, MMLU, a two-node reboot test, sustained multimodal load.
+
+---
+
 ## 2026-09-08 (later) — Both backports promoted, on two boots and a test written for the one thing that was left
 
 **The production configuration now carries `HAREM_PREFIX_HIT=1` and `HAREM_KPOOL_TAIL_FIX=1`.**

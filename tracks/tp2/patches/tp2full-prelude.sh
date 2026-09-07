@@ -51,7 +51,25 @@ run() {
   return 0
 }
 
-echo "[tp2full-prelude] rank=${NODE_RANK:-?} tp=${TP_SIZE:-?} ep=${ENABLE_EP:-?} fullscope=${HAREM_EXL3_FULLSCOPE:-0} fastload=${HAREM_FASTLOAD_MODE:-off}"
+echo "[tp2full-prelude] TP2D arm rank=${NODE_RANK:-?} tp=${TP_SIZE:-?} ep=${ENABLE_EP:-?} fullscope=${HAREM_EXL3_FULLSCOPE:-0} vision=${HAREM_VISION:-0} fastload=${HAREM_FASTLOAD_MODE:-off}"
+
+# --- patch-vllm-tp3.py at TWO ranks (8 September 2026) -----------------------
+# The two-node tree deliberately did NOT carry this file: its padding half is a
+# no-op by arithmetic at tp<=2 (lcm(128, 2) = 128; 154,880 and 2,048 are already
+# multiples of 128), and we do not ship text we have not measured.  The VISION
+# arm changes that, because edit 4b of this script is what wraps the tower
+# construction block:
+#
+#     self.visual = Glm5NextVisionTransformer(   ->  _harem_build_vision_tower(
+#
+# and patch-vision-tp3.py's VS1 anchor is written against the POST-4b text
+# (a stock-file anchor matched zero times and stopped all three TP=3 ranks with
+# exit 21 on 7 September -- docs/18 section 13).  Rather than fork the vision
+# patch for two ranks, the two-node tree now carries the same file the three-node
+# tree does, byte for byte, and the padding half stays the no-op it always was.
+# Edit 4c (skip visual.* when the tower was not built) is what keeps
+# LANGUAGE_MODEL_ONLY=1 working in this same tree.
+run python3 "$TP2_DIR/patch-vllm-tp3.py" --root "$VLLM_PY"
 
 # Logging only: print the per-group decomposition of the KV pool arithmetic, so
 # "GPU KV cache size: N tokens" is an explained number rather than a mystery.
@@ -119,6 +137,27 @@ fi
 # rank instead of serving a silently-wrong model.
 run python3 "$TP2_DIR/patch-indexer-workspace-tp3.py" --root "$VLLM_PY"
 
+# --- prefix-hit + kpool-tail backports at TWO ranks (8 September 2026) -------
+# Both files are the three-node track's, byte for byte: neither reads the rank
+# count.  Applied UNCONDITIONALLY; BEHAVIOUR env-gated and default OFF, so the
+# knobs unset == the two-node candidate C tree, byte for byte.
+#
+#  HAREM_PREFIX_HIT=1      flag ONLY the DFlash2 drafter's KV groups as EAGLE
+#                          groups.  Unset, nothing is flagged and the
+#                          coordinator falls back to flagging EVERY group, so
+#                          the target MLA group drops a whole block off every
+#                          exact-repeat prefix hit.  The BLOCK GRANULARITY is
+#                          pool arithmetic and is NOT the three-node 3,328 --
+#                          measure it (the GCD of the observed hits) with
+#                          prefix-hit-probe.py before quoting a ceiling.
+#  HAREM_KPOOL_TAIL_FIX=1  pass positions through the hybrid attention-metadata
+#                          path so the K-pool tail's own circular slot mapping
+#                          runs, and write it in place.  Rank-count independent
+#                          (it is the hybrid/KDA model path).
+#  HAREM_KPOOL_TAIL_BOUNDS=1  arm the tail wrong-block counter (log only).
+run python3 "$TP2_DIR/patch-prefixhit-tp3.py" --root "$VLLM_PY"
+run python3 "$TP2_DIR/patch-kpooltail-tp3.py" --root "$VLLM_PY"
+
 # --- Full-scope EXL3 at two ranks -------------------------------------------
 # S1 packed_modules_mapping, S2 stop hard-wiring MLA+KDA to bf16, S3 KDA
 # refactorisation. No A9/A10: those are the padded-load audit and there is no
@@ -128,6 +167,44 @@ run python3 "$TP2_DIR/patch-indexer-workspace-tp3.py" --root "$VLLM_PY"
 if [ "${HAREM_EXL3_FULLSCOPE:-}" = "1" ]; then
   echo "[tp2full-prelude] patch-fullscope-tp2.py sha256 $(sha256sum "$TP2_DIR/patch-fullscope-tp2.py" | cut -c1-16)"
   run python3 "$TP2_DIR/patch-fullscope-tp2.py" --root "$VLLM_PY"
+fi
+
+# --- The vision tower at TWO ranks (8 September 2026) ------------------------
+# Same six anchors as at three ranks, same file, same knob.  What two ranks
+# change is NOT in this script:
+#   * the tower divides cleanly at tp=2 (heads 16/2 = 8, attn.proj 512 = 4x128,
+#     MLP and merger 2048 = 16x128, merger context 5120 = 40x128), so the
+#     head-count problem that forces --mm-encoder-tp-mode data at three ranks
+#     does not exist here.  We ship `data` anyway and say why in docs/19: it
+#     REPLICATES the tower instead of slicing it, and slicing a 6-bit EXL3
+#     tower across ranks is a path nothing in this repository has measured.
+#     The tower is 0.557 GiB, so replication is the cheap side of that trade.
+#   * everything else -- VS1/VS2/VS3 (the checkpoint is 6-bit EXL3 and vLLM
+#     builds the tower with quant_config=None whatever the rank count) and
+#     VS4/VS6/VS7 (the upstream frame-sampler mismatch, vllm#55644) -- is a
+#     property of the CHECKPOINT and of upstream, not of sharding.
+#
+# ORDER: after patch-fullscope-tp2.py (whose A3 anchor is the MLA line, a
+# different string) and after patch-vllm-tp3.py (VS1 anchors on its edit 4b).
+# HAREM_VISION unset => nothing below runs => candidate C byte for byte.
+if [ "${HAREM_VISION:-}" = "1" ]; then
+  echo "[tp2full-prelude] VISION ARM: patch-vision-tp3.py sha256 $(sha256sum "$TP2_DIR/patch-vision-tp3.py" | cut -c1-16)"
+  run python3 "$TP2_DIR/patch-vision-tp3.py" --root "$VLLM_PY"
+  # Three model-free gates, in the boot log, before a byte of weight moves.
+  # HAREM_VISION_GATES=0 only if a gate is itself broken -- never to get past a
+  # gate that is telling the truth.
+  if [ "${HAREM_VISION_GATES:-1}" = "1" ] && [ -d "${1:-}" ]; then
+    run python3 "$TP2_DIR/check-vision-mapping.py" --model "$1" \
+        --env-mapping "${CUDA_EXL3_PACKED_MAPPING:-}"
+    run python3 "$TP2_DIR/check-vision-names.py" --model "$1"
+    if [ -d "$TP2_DIR/fixtures" ]; then
+      run python3 "$TP2_DIR/check-video-geometry.py" --model "$1" \
+          --fixtures "$TP2_DIR/fixtures" \
+          --max-video-tokens "${HAREM_VISION_MAX_VIDEO_TOKENS:-8000}"
+    else
+      echo "[tp2full-prelude] VISION: no fixtures under $TP2_DIR -- video geometry gate SKIPPED"
+    fi
+  fi
 fi
 
 # Import flashinfer.comm once, CPU-side, before any worker starts: prints the
@@ -151,5 +228,5 @@ if [ -n "${HAREM_FASTLOAD_MODE:-}" ] && [ -d "${1:-}" ]; then
   run python3 "$TP2_DIR/preflight-fastload.py" --model "$1"
 fi
 
-echo "[tp2full-prelude] patches applied (tp2full arm); starting vllm serve"
+echo "[tp2full-prelude] patches applied (tp2d arm: candidate C + vision + prefix-hit + kpool-tail); starting vllm serve"
 exec vllm serve "$@"

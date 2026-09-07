@@ -589,6 +589,37 @@ at all on this stack, which we measured by accident and cannot yet explain: [doc
 §2.34. Everything needed is in the repository: both patch scripts, the detector, the probe, the two
 soaks, the equality test and the unit tests.
 
+## 13. The vision tower **sliced** across two ranks, and a second boot of candidate D
+
+**Effort: one dump boot and one measured boot, about two hours. Needs two DGX Spark nodes.**
+
+At two ranks every width in the GLM-5.3-Flash vision tower divides and leaves whole 128-column
+blocks — heads 16/2 = 8, `attn.proj` 512 = 4 × 128, MLP and merger 2048 = 16 × 128, merger context
+5120 = 40 × 128 — so `--mm-encoder-tp-mode data` is **optional** there. We shipped it anyway and
+replicated the tower, because dividing it means slicing a **6-bit EXL3** tower across ranks and this
+repository has measured that at no rank count ([docs/19](docs/19-vision-at-two-ranks.md) §1).
+
+**What we would want reported**, from a boot with the flag removed:
+
+1. Does the tower load at all, and does `CUDA_EXL3_DEBUG_NAMES=1` still report **99 EXL3 linears,
+   0 unquantized**, or does something fall back to bf16?
+2. The KV pool against the replicated arm. The prize is about **0.28 GiB per rank** — half of a
+   0.557 GiB tower — out of a measured 0.81 GiB total cost.
+3. The six vision gates, unchanged ([`results/gates/tp2-candidate-d.md`](results/gates/tp2-candidate-d.md) §3),
+   because a tower that loads and answers *plausibly* is the failure mode that matters here.
+
+**Decide the flag before the dump boot.** The fast-load sidecar stores post-load per-rank tensors and
+its identity does not hash the command line, so flipping this after a dump restores shapes nobody
+checked.
+
+**And the cheaper half of this item: a second boot of candidate D.** Every figure in
+[docs/15](docs/15-tp2-track.md) §5.10 rests on one boot, which is why its −4.0 % pool row is written
+down as a cost rather than as noise: with no boot-to-boot spread at two ranks we cannot separate "the
+tower" from "this boot". Two more boots of the same configuration would settle it and cost nothing
+but time.
+
+---
+
 ## What we would rather you did not send
 
 Repeated from `CONTRIBUTING.md` because it is the shortest way to save your afternoon:

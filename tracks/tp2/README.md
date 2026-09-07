@@ -19,8 +19,8 @@ Three nodes instead of two: [tracks/tp3](../tp3/) and the [README quick start](.
 | File | What it is |
 |---|---|
 | [`env.tp2-full.example`](env.tp2-full.example) | **The production-candidate template.** `NNODES=2`, `TP_SIZE=2`, `ENABLE_EP=0`, no padding sidecar, `gpu-memory-utilization` **0.85** rather than the three-node 0.88, and four settings that are not optional at two ranks |
-| [`patches/`](patches/) | The in-container patch tree — fourteen files against the three-node tree's twenty-three, because nothing here has to pad anything. [`patches/README.md`](patches/README.md) is the inventory |
-| [`harem-exl3-tp2.service`](harem-exl3-tp2.service) | The autostart unit. It is a unit **of its own** — you do not edit the three-node one. Installed, started, health-checked and stopped on both nodes on 6 September 2026, and left `disabled`, because exactly one of the two units may be enabled |
+| [`patches/`](patches/) | The in-container patch tree — **eighteen** files against the three-node tree's twenty-three, because nothing here has to pad anything. Four of the eighteen are the three-node track's files used byte for byte; [`patches/vision/`](patches/vision/README.md) and [`patches/prefix-hit-and-kpool-tail/`](patches/prefix-hit-and-kpool-tail/README.md) are pointers with install commands rather than second copies. [`patches/README.md`](patches/README.md) is the inventory |
+| [`harem-exl3-tp2.service`](harem-exl3-tp2.service) | The autostart unit. It is a unit **of its own** — you do not edit the three-node one. Installed, started, health-checked and stopped on both nodes on 6 September 2026 and again on 8 September, where it brought candidate D to `/health` 200 in **280 s**. Left `disabled`, because exactly one of the two units may be enabled |
 | [`motor-onkosul-exl3-tp2.sh`](motor-onkosul-exl3-tp2.sh) | Its preflight — `FABRIC_PEERS` is **one** address per node rather than two; the ConnectX-7 check stays `4/4`, because it counts ports on the node, not peers |
 
 **Derive each node's environment file from the template with `sed`, on that node.** Never copy a
@@ -67,28 +67,36 @@ here is weight-bandwidth bound, and adding a rank cuts each rank's weight traffi
 
 ## The numbers
 
-**The TP=2 recipe, measured 6 September 2026 — candidate C** (the full-scope candidate plus the
-sparse-indexer workspace bound, [docs/15](../../docs/15-tp2-track.md) §5.9) — two nodes, TP=2, EP off, image
-`exl3-zeus:754421f`, the full-scope checkpoint (`turboderp/GLM-5.3-Flash-exl3` at 4.05 bpw), KV fp8
-and an fp8 draft cache, DFlash2 k=7, `--block-size 256`, `HAREM_SW_BLOCK_SIZE=256`,
-`--max-num-batched-tokens 2048`, `--max-num-seqs 8`, `--max-model-len 1000000`,
-`gpu-memory-utilization 0.85`, `NCCL_MAX_NCHANNELS=8`, per-rank fast-load sidecar, warm tuner cache,
-temperature 0, reasoning effort `low`, median of sweep rounds 2-4 `[measured-here]`:
+**The TP=2 recipe, measured 8 September 2026 — candidate D** (candidate C, the full-scope candidate
+plus the sparse-indexer workspace bound, **plus the vision tower and the two upstream backports**;
+[docs/15](../../docs/15-tp2-track.md) §5.10 and [docs/19](../../docs/19-vision-at-two-ranks.md)) — two nodes,
+TP=2, EP off, image `exl3-zeus:754421f`, the full-scope checkpoint
+(`turboderp/GLM-5.3-Flash-exl3` at 4.05 bpw), KV fp8 and an fp8 draft cache, DFlash2 k=7,
+`--block-size 256`, `HAREM_SW_BLOCK_SIZE=256`, `--max-num-batched-tokens 2048`, `--max-num-seqs 8`,
+`--max-model-len 1000000`, `gpu-memory-utilization 0.85`, `NCCL_MAX_NCHANNELS=8`, per-rank fast-load
+sidecar, warm tuner cache, temperature 0, reasoning effort `low`, median of three sweep rounds,
+**one boot** `[measured-here]`:
 
-| | |
-|---|---|
-| Single-stream decode (C1) | **60.08** tok/s aggregate (**65.96** per stream) |
-| Aggregate at 8 concurrent streams (C8) | **157.71** tok/s |
-| Prefill, fresh unseen ~8.4K prompts | **1,414** tok/s |
-| KV pool at `max_model_len` 1,000,000 | **2,692,857** tokens — about 2.7 concurrent 1M-token requests, **+26.5 %** over the candidate it replaces |
-| TTFT, C1 / C8 | **0.381** / **1.054** s |
-| Quality | correctness probe **10/10**, code exam **12/12** cold and warm, tool-call **8/8**, needle-lite **6/6**; MMLU sample (1,995 q) **86.02 ±0.75** |
-| Cold boot, fast-load | **272 s** (the one-off dump boot that writes the sidecar is 956 s) |
-| Autostart unit → `/health` 200 | **261 s**, `systemctl start` on both nodes — **candidate B, not re-run on C**. Candidate C's unit points at the same launcher with a different env file and sidecar and was not re-timed under it. **No reboot test yet** `[not tested]` |
-| Consumed memory per node | **79.5 / 80.4 GiB** |
+| | | candidate C, for comparison |
+|---|---|---|
+| Single-stream decode (C1) | **59.45** tok/s aggregate (**64.45** per stream) | 60.08 / 65.96 |
+| Aggregate at 8 concurrent streams (C8) | **155.47** tok/s | 157.71 |
+| Prefill, fresh unseen ~8.4K prompts | **1,413** tok/s | 1,414 |
+| KV pool at `max_model_len` 1,000,000 | **2,585,714** tokens — about 2.6 concurrent 1M-token requests | 2,692,857; the tower costs −4.0 % |
+| TTFT, C1 / C8 | **0.375** / **1.080** s | 0.381 / 1.054 |
+| **4 images + 2 videos per request** | six gates, all passing, including all six items in **one** request and a third video refused with HTTP 400 | refuses the request |
+| **The two backports** | an 8K exact repeat reads **57.5 %** out of the cache — **100 % of the ceiling**, against **0.0 %** with the knobs off | not present |
+| Quality | probe **10/10**, code exam **12/12** first try, tool-call **8/8**, needle-lite **6/6 ×3**, cached-path equality **24/24**; MMLU sample (1,995 q) **86.02 ±0.75** | equal |
+| Cold boot, fast-load, through the unit | **280 s** (the one-off dump boot that writes the sidecar is 1,013 s) | 272 s by hand / 956 s |
+| Autostart unit → `/health` 200 | **280 s**, `systemctl start` on both nodes, **on this configuration**. **No reboot test yet** `[not tested]` | 261 s, candidate B's |
+| Available KV memory per rank | **20.15 / 19.54 GiB** | 21.31 / 20.33 |
 
-**MMLU is candidate B's**: candidate C changes no weight and no kernel, only the size of a
-scratch buffer, and the short quality gates were taken as sufficient `[not tested]`.
+**MMLU is candidate B's**: neither candidate C nor D changes a language-model weight or a kernel, and
+the short quality gates were taken as sufficient `[not tested]`.
+
+**The block granularity is 4,608 tokens at two ranks**, not the three-node 3,328 — it is the one
+rank-dependent number in either backport and it is measured, not copied
+([docs/15](../../docs/15-tp2-track.md) §5.10).
 
 **How candidate C was separated from candidate B.** Not by comparing the two tables above — those
 are different sessions. A same-session A/B with **one environment line** between the arms, both

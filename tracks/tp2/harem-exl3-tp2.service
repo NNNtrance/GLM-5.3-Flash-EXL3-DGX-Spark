@@ -1,5 +1,5 @@
 [Unit]
-Description=GLM-5.3-Flash EXL3 engine (TP=2 recipe: two nodes, candidate C, tp2c tree)
+Description=GLM-5.3-Flash EXL3 engine (TP=2 recipe: two nodes, candidate D -- vision + prefix-hit + kpool-tail, tp2d tree)
 After=docker.service network-online.target
 Wants=network-online.target
 Requires=docker.service
@@ -11,13 +11,13 @@ Conflicts=harem-exl3.service harem-motor.service
 Type=oneshot
 RemainAfterExit=yes
 User=@USER@
-Environment=ENV_FILE=@HOME@/exl3-zeus/.env.tp2c-load
+Environment=ENV_FILE=@HOME@/exl3-zeus/.env.tp2d
 Environment=HOME=@HOME@
-WorkingDirectory=@HOME@/exl3-zeus/tp2c
+WorkingDirectory=@HOME@/exl3-zeus
 ExecStartPre=/bin/bash @HOME@/exl3-zeus/motor-onkosul-exl3-tp2.sh
-ExecStart=/bin/bash @HOME@/exl3-zeus/tp2c/start-tp2full.sh
+ExecStart=/bin/bash @HOME@/exl3-zeus/start-tp2full.sh
 ExecStop=/usr/bin/docker stop -t 60 exl3-tp2
-TimeoutStartSec=1200
+TimeoutStartSec=1800
 
 [Install]
 WantedBy=multi-user.target

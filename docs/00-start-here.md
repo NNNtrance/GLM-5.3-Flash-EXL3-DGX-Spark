@@ -74,7 +74,7 @@ cannot be split three ways, and the shape surgery that makes it possible anyway)
 [13](13-full-scope-checkpoint.md) §7 (the padded-load port, which is the production recipe) and
 [`tracks/tp3/patches/`](../tracks/tp3/patches/README.md).
 
-A fourth since 7 September 2026: [18](18-vision-at-three-ranks.md), the **vision tower**. The
+A fourth since 7 September 2026: [18](18-vision-at-three-ranks.md), the **vision tower**, with its two-node counterpart [19](19-vision-at-two-ranks.md) since 8 September. The
 production configuration accepts 4 images and 2 videos per request, and at three ranks that took a
 replication flag rather than the padding this stack uses everywhere else, because nothing in the
 tower divides by three.
@@ -119,7 +119,8 @@ Every `docs/NN-*.md` page carries an **Applies to** badge on its first line. Thi
 | [15 — Running this recipe at TP=2](15-tp2-track.md) | **TP=2 only** | The two-node track |
 | [16 — Comparison with other published recipes](16-comparison-with-published-recipes.md) | **both tracks** | §3 is two nodes, §4 is three, §4.4 is four |
 | [17 — The memory ledger](17-memory-ledger.md) | **both tracks** | The ledger is the three-node arrangement; §6 is the two-node column, and the KDA state finding is worse at two ranks than at three |
-| [18 — Vision at three ranks](18-vision-at-three-ranks.md) | **TP=3** | The vision tower, on: 4 images + 2 videos per request. The loader half is a checkpoint property and applies at any rank count; the replication flag is TP=3's own; §11 is the two-node note `[not tested]` |
+| [18 — Vision at three ranks](18-vision-at-three-ranks.md) | **TP=3** | The vision tower, on: 4 images + 2 videos per request. The loader half is a checkpoint property and applies at any rank count; the replication flag is TP=3's own. §11 now points at the two-node page |
+| [19 — Vision at two ranks](19-vision-at-two-ranks.md) | **TP=2** | The same tower on two nodes, measured 8 September 2026: what divides and why we replicated it anyway, the anchor dependency that made the two-node patch tree grow a file, and the drafter config that stops a two-node boot |
 
 And the directories:
 

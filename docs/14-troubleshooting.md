@@ -1645,6 +1645,47 @@ file-by-file `cmp` — a mitigation, not the fix.
 two 154+ GiB checkpoints × 3. One node had 51 GB free before the arm and needed old sidecars cleared
 first.
 
+### 10.5 A two-node boot dies on the drafter, because the TP=3 pad was written into its config
+
+**Track:** **TP=2 only** — the pad it trips over exists only to serve three ranks.
+
+Four minutes into a two-node boot, after the target model has already been read:
+
+```
+File ".../vllm/model_executor/models/qwen3_dflash.py", line 186, in __init__
+    assert self.total_num_kv_heads % tp_size == 0
+AssertionError
+```
+
+**The drafter is not the problem.** The DFlash2 drafter's own GQA is 32/8 and 8 divides by two;
+[04](04-dflash2-port.md) says so in its first line. The problem is that the three-node track applies
+its 32/8 → 36/9 pad by **rewriting `config.json` inside the drafter directory**, keeping the original
+beside it as `config.json.orig`. Nine key-value heads do not divide by two.
+
+**Fix — a directory, not a patch.** The weights are identical; only the config differs, so hard-link
+the safetensors rather than copying 2.3 GB:
+
+```
+install -d /var/tmp/dflash2-draft-tp2
+```
+
+```
+cp /var/tmp/dflash2-draft/config.json.orig /var/tmp/dflash2-draft-tp2/config.json
+```
+
+```
+ln /var/tmp/dflash2-draft/model.safetensors /var/tmp/dflash2-draft-tp2/model.safetensors
+```
+
+Then point `DRAFT_HOST_PATH` at it. `scripts/start-tp2full.sh` has always defaulted to that path;
+what was missing was the sentence saying why the directory has to exist separately.
+
+**Do it before the dump boot.** The fast-load sidecar's identity hashes the drafter's `config.json`,
+so fixing the config afterwards invalidates the sidecar and costs a second dump — which is exactly
+what it cost us, 8 September 2026 `[measured-here]`. [19](19-vision-at-two-ranks.md) §3.
+
+---
+
 ---
 
 ## 11. The silent-failure index

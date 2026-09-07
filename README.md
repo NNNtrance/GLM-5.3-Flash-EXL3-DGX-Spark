@@ -37,7 +37,7 @@ units — so they cannot be mixed by accident.
 | You have | What this repository gives you |
 |---|---|
 | **3 DGX Spark** | The **TP=3 track**: the production recipe, the quick start below, [`tracks/tp3`](tracks/tp3/README.md) |
-| **2 DGX Spark** | The **TP=2 track**: [docs/15](docs/15-tp2-track.md) and [`tracks/tp2`](tracks/tp2/README.md). At two ranks nothing needs padding, so it is a *shorter* recipe — fourteen patch files against twenty-three — rather than a cut-down one |
+| **2 DGX Spark** | The **TP=2 track**: [docs/15](docs/15-tp2-track.md) and [`tracks/tp2`](tracks/tp2/README.md). At two ranks nothing needs padding, so it is a *shorter* recipe — eighteen patch files against twenty-three — rather than a cut-down one. Since 8 September it carries everything the three-node track does: the vision tower ([docs/19](docs/19-vision-at-two-ranks.md)) and both upstream backports |
 | **1 DGX Spark** | No serving recipe: 153.8 GiB of weights against 121.6 GiB of unified memory. Still yours — the image build, the GB10 kernel fixes, the measurement protocol, the model-free benches and the failure index. [docs/00 §1](docs/00-start-here.md) |
 | **4 DGX Spark** | Nothing measured `[not tested]`. The padding and expert-parallel arithmetic, the cabling problem and what we would want reported are in [HELP-WANTED.md](HELP-WANTED.md) §1 |
 
@@ -66,20 +66,23 @@ this configuration:
 
 Two DGX Spark nodes, TP=2, **expert parallelism off**, the same full-scope checkpoint,
 `gpu-memory-utilization` **0.85** — the three-node rung is not transferable and the two-node
-ladder has never been derived — same harness and same protocol, 6 September 2026 `[measured-here]`.
-**Candidate C** (the indexer-workspace bound carried to two ranks, [docs/15 §5.9](docs/15-tp2-track.md)) is
-the published configuration since 6 September evening; its speed rows are a different session from
-candidate B's and are inside the bands:
+ladder has never been derived — same harness and same protocol `[measured-here]`.
+**Candidate D** since 8 September: candidate C ([docs/15 §5.9](docs/15-tp2-track.md), the
+indexer-workspace bound at two ranks) **plus the vision tower and the two upstream backports**, with
+the memory rung and every other setting untouched. The speed rows below are candidate D's, measured
+in a different session from candidate C's and inside the bands:
 
 | | |
 |---|---|
-| Single-stream decode (C1) | **60.08** tok/s aggregate (**65.96** per stream) |
-| Aggregate at 8 concurrent streams (C8) | **157.71** tok/s |
-| Prefill, fresh unseen ~8.4K prompts | **1,414** tok/s |
-| KV pool at `max_model_len` 1,000,000 | **2,692,857** tokens — about 2.7 concurrent 1M-token requests (candidate B: 2,128,571; **+26.5 %** from the workspace bound) |
-| Quality | correctness probe **10/10**, code exam **12/12** cold and warm, tool-call **8/8**, needle-lite **6/6**, one ~1M-token request and 8 × ~128K concurrent lanes correct; MMLU sample (1,995 q) **86.02 ±0.75** is candidate B's, not re-run on C |
-| Cold boot, fast-load | **272 s** (the one-off dump boot that writes the sidecar is 956 s) |
-| Autostart unit → `/health` 200 | **261 s**, `systemctl start` on both nodes — **candidate B, not re-run on C**. Candidate C's unit is the same unit pointing at the same launcher with a different env file and sidecar, and was not re-timed under it. **No reboot test yet** `[not tested]` |
+| Single-stream decode (C1) | **59.45** tok/s aggregate (**64.45** per stream) — candidate C read 60.08 / 65.96 |
+| Aggregate at 8 concurrent streams (C8) | **155.47** tok/s — candidate C read 157.71 |
+| Prefill, fresh unseen ~8.4K prompts | **1,413** tok/s — candidate C read 1,414 |
+| KV pool at `max_model_len` 1,000,000 | **2,585,714** tokens — about 2.6 concurrent 1M-token requests. Candidate C read 2,692,857; the tower costs **−4.0 %**, and with one boot each that is written down as a cost rather than as boot noise |
+| **Multimodal: 4 images + 2 videos per request** | Six gates, all passing, including 4 images and 2 videos in **one** request (5,991 prompt tokens) and a third video correctly refused with HTTP 400 while the engine stays up. [docs/19](docs/19-vision-at-two-ranks.md) |
+| **The two backports** | `HAREM_PREFIX_HIT=1` and `HAREM_KPOOL_TAIL_FIX=1`, the same night they were promoted at three ranks. An 8K exact repeat reads **57.5 % of its prompt out of the cache, which is 100 % of the ceiling** — and the ceiling is set by a **4,608-token** block at two ranks rather than the three-node 3,328, a number you measure rather than copy |
+| Quality | correctness probe **10/10**, code exam **12/12** on the first attempt, tool-call **8/8**, needle-lite **6/6 three times**; MMLU sample (1,995 q) **86.02 ±0.75** is candidate B's, not re-run since |
+| Cold boot, fast-load | **280 s** through the autostart unit (the one-off dump boot that writes the sidecar is 1,013 s; sidecar 79 GB per rank) |
+| Autostart unit → `/health` 200 | **280 s**, `systemctl start` on both nodes, on the configuration this table describes. Installed **disabled** — exactly one of the two units may be enabled. **No reboot test yet** `[not tested]` |
 
 **Two ranks are 80–86 % of the speed on 38 % of the pool, at quality that is inside one error bar.**
 The side-by-side comparison, and why the third node wins on latency as well as on memory, is further
@@ -108,8 +111,8 @@ line, each tagged with the node counts it can happen on. You do not need the sib
 either track. **Each track is complete on its own** — its own environment template, launcher, patch
 tree, fast-load sidecar and autostart unit, in [`tracks/`](tracks/README.md) — so the two-node recipe
 is not a cut-down of the three-node one and no page asks you to mentally subtract a rank. At two
-ranks nothing needs padding, so it is genuinely *shorter*: the patch tree is fourteen files rather
-than twenty-three.
+ranks nothing needs padding, so it is genuinely *shorter*: the patch tree is eighteen files rather
+than twenty-three, and four of the eighteen are the three-node track's files used byte for byte.
 
 > **About the name "HAREM".** HAREM is simply the name we gave our three-node setup. It is hardcoded
 > in several places in the stack — patch markers (`HAREM-TP3`, `HAREM-GB10-TOPK`), environment
@@ -460,12 +463,13 @@ sits at `Running: 0, Waiting: 1, GPU KV cache usage: 0.0 %` indefinitely, becaus
 17. [16 — Comparison with other published recipes](docs/16-comparison-with-published-recipes.md) — a dozen other public GLM-5.3-Flash EXL3 DGX Spark recipes, quoted exactly as they publish them with their own stated conditions, beside our numbers at the matching node count. Read the conditions column before you read the numbers. It also contains the two most useful outside findings we know of: **two other people quantized this model's dense path independently, one at two nodes and one at three, and both measured a gain in the same band as ours** — and a four-node recipe's soak hang that we have never looked for on three.
 18. [17 — The memory ledger](docs/17-memory-ledger.md) — **where the 121.6 GiB on each node actually goes**, read from the logs rather than estimated: the per-node ledger down to the driver's fixed reserve, the KV block's anatomy, the KDA state slots that speculation costs, a ranked give-back list with six items already closed at zero, the two-node column beside it, and one pair of our own boots that does not reconcile.
 19. [18 — Vision at three ranks](docs/18-vision-at-three-ranks.md) — **the vision tower, on.** Why the recipe said it could not run at three ranks and why that was wrong; the two loader blockers that a flag does not clear, because this checkpoint's tower is 6-bit EXL3 and vLLM builds it unquantized; **the upstream video sampler bug that kills the engine core on the first video request at any parallel size**, with the arithmetic that found it on a CPU in under a second; the brake and the activation ceiling; ten gates with the model's own answers; and the cost, which is inside the boot-to-boot noise on every axis.
-20. [audit/](audit/README.md) — a post-install self-check with our own numbers beside each step, the provenance table for every headline figure, and the retraction index. Run `audit/run-audit.sh` before you conclude anything about your install.
-21. [charts/](charts/) — four figures generated from the CSVs in [`results/`](results/README.md) by [`charts/make-charts.py`](charts/make-charts.py), standard library only, so you can regenerate them and check the bars against the rows.
-22. [systemd](systemd/README.md) — **the autostart units and their preflights**, real, installed and — at three nodes — reboot-tested, plus the hazard that comes first: if you also run the NVFP4 sibling, or the other track's unit, whichever is enabled wins a reboot. Exactly one may be enabled. Read this before a reboot.
-23. [tracks/](tracks/README.md) — **the files that differ between the two node counts**, one folder each: the environment template, the patch tree and the autostart unit. Everything else in this repository is shared, and this page says why each shared thing is shared. It also carries the one trap the move introduces: the directory name here is not the directory name on your nodes.
-24. [**HELP-WANTED.md**](HELP-WANTED.md) — **what a second cluster could settle, ranked, with the expected effort on every item.** Four nodes, a two-node reboot test, the memory ladder at two ranks, other checkpoints, the mesh plugin's small-message latency floor, the KDA state slots, the KDA GEMM gap, a one-bench falsification of a kernel closure that was corrected the day it was measured, an upstream vLLM issue we measured and confirmed on someone else's thread rather than duplicating, a second one we filed ourselves (the CUDA-graph support gate at three ranks, [vllm#55581](https://github.com/vllm-project/vllm/issues/55581)), and the four largest items from docs/11. It also says, per item, what a contributor with fewer nodes can and cannot check.
-25. [CREDITS](CREDITS.md) · [LICENSES](LICENSES.md) · [CHANGELOG](CHANGELOG.md) · [CONTRIBUTING](CONTRIBUTING.md) · [STYLE-GUIDE](STYLE-GUIDE.md) · [`.github/`](.github/) — three issue templates and a pull request template, all of them the measurement protocol in [docs/09](docs/09-measurement-protocol.md) turned into checklists
+20. [19 — Vision at two ranks](docs/19-vision-at-two-ranks.md) — **the same tower on two nodes, measured 8 September 2026.** What divides at two ranks and why we replicated the tower anyway rather than slice a 6-bit EXL3 one; the anchor dependency that made the two-node patch tree grow a file it had deliberately refused; the drafter `config.json` carrying a three-node pad that stops a two-node boot four minutes in; the six gates, and what the tower cost in pool, boot and host memory.
+21. [audit/](audit/README.md) — a post-install self-check with our own numbers beside each step, the provenance table for every headline figure, and the retraction index. Run `audit/run-audit.sh` before you conclude anything about your install.
+22. [charts/](charts/) — four figures generated from the CSVs in [`results/`](results/README.md) by [`charts/make-charts.py`](charts/make-charts.py), standard library only, so you can regenerate them and check the bars against the rows.
+23. [systemd](systemd/README.md) — **the autostart units and their preflights**, real, installed and — at three nodes — reboot-tested, plus the hazard that comes first: if you also run the NVFP4 sibling, or the other track's unit, whichever is enabled wins a reboot. Exactly one may be enabled. Read this before a reboot.
+24. [tracks/](tracks/README.md) — **the files that differ between the two node counts**, one folder each: the environment template, the patch tree and the autostart unit. Everything else in this repository is shared, and this page says why each shared thing is shared. It also carries the one trap the move introduces: the directory name here is not the directory name on your nodes.
+25. [**HELP-WANTED.md**](HELP-WANTED.md) — **what a second cluster could settle, ranked, with the expected effort on every item.** Four nodes, a two-node reboot test, the memory ladder at two ranks, other checkpoints, the mesh plugin's small-message latency floor, the KDA state slots, the KDA GEMM gap, a one-bench falsification of a kernel closure that was corrected the day it was measured, an upstream vLLM issue we measured and confirmed on someone else's thread rather than duplicating, a second one we filed ourselves (the CUDA-graph support gate at three ranks, [vllm#55581](https://github.com/vllm-project/vllm/issues/55581)), and the four largest items from docs/11. It also says, per item, what a contributor with fewer nodes can and cannot check.
+26. [CREDITS](CREDITS.md) · [LICENSES](LICENSES.md) · [CHANGELOG](CHANGELOG.md) · [CONTRIBUTING](CONTRIBUTING.md) · [STYLE-GUIDE](STYLE-GUIDE.md) · [`.github/`](.github/) — three issue templates and a pull request template, all of them the measurement protocol in [docs/09](docs/09-measurement-protocol.md) turned into checklists
 
 ## The four figures
 

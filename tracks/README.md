@@ -40,8 +40,18 @@ tracks/
     env.tp2-full.example         the two-node production candidate
     harem-exl3-tp2.service       the autostart unit
     motor-onkosul-exl3-tp2.sh    its preflight
-    patches/                     the in-container patch tree, 14 files
+    patches/                     the in-container patch tree, 18 files
+    patches/vision/              a POINTER, not a copy: the tower at two ranks
+    patches/prefix-hit-and-kpool-tail/
+                                 a POINTER, not a copy: the two backports at two ranks
 ```
+
+**Four files are shared between the trees by copying, and the two `patches/` subdirectories above
+say so rather than duplicating them.** `patch-vllm-tp3.py`, `patch-vision-tp3.py`,
+`patch-prefixhit-tp3.py` and `patch-kpooltail-tp3.py` are used at two ranks byte for byte — none of
+them reads the rank count — and the only rank-dependent thing in any of them is a *number you
+measure*, the prefix-cache block granularity (3,328 at three ranks, **4,608** at two:
+[docs/15](../docs/15-tp2-track.md) §5.10).
 
 Nothing was rewritten in the move. `tracks/tp3/patches/` is the tree this repository used to publish
 as `patches/tp3full/` and `tracks/tp2/patches/` is `patches/tp2full/`, file for file. One file did

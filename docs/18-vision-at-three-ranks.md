@@ -763,6 +763,11 @@ measurement, and it found no harm. The number is written down either way.
 
 ## 11. Two ranks, and four
 
+**Two ranks now has a page of its own: [19](19-vision-at-two-ranks.md), measured 8 September 2026.**
+It is in the two-node recipe, 4 images + 2 videos per request, on the full-scope checkpoint
+`[measured-here]`. What this section predicted was right and did not turn out to be the part that
+mattered; two things it did not see are in that page, and the rows below are corrected in place.
+
 **At two ranks the tower divides and needs no padding and no data-parallel flag.** Every width in
 §1.1's table is a clean multiple of 2 and of 128 per rank: heads 8, `attn.proj` 512 = 4 × 128, MLP
 2048 = 16 × 128, merger 2048 = 16 × 128, merger context 5120 = 40 × 128.
@@ -774,12 +779,16 @@ what you need:
 | Checkpoint at TP=2 | What is needed |
 |---|---|
 | `brandonmusic/GLM-5.3-Flash-tr3-4bpw` (routed experts only) — the tower is dense BF16, 347 tensors, 1.05 GiB | `LANGUAGE_MODEL_ONLY=0` and the per-request limits. Nothing else `[not tested]` |
-| `turboderp/GLM-5.3-Flash-exl3` @4.05bpw (full scope) — the two-node production candidate, [15](15-tp2-track.md) | The **same** VS1/VS2/VS3 and the same `CUDA_EXL3_PACKED_MAPPING`, plus VS4/VS6/VS7 for video. `--mm-encoder-tp-mode data` is **not** needed `[not tested]` |
+| `turboderp/GLM-5.3-Flash-exl3` @4.05bpw (full scope) — the two-node production candidate, [15](15-tp2-track.md) | The **same** VS1/VS2/VS3 and the same `CUDA_EXL3_PACKED_MAPPING`, plus VS4/VS6/VS7 for video — **confirmed by running it**, 8 September 2026: the tower loads, `EXL3 linears=99, unquantized linears=0`, and all six gates pass `[measured-here]`. **And one thing this row missed**: VS1's anchor needs `patch-vllm-tp3.py`, which the two-node tree deliberately did not ship, so the tree gains a file — [19](19-vision-at-two-ranks.md) §2 |
 
 The video half — VS4, VS6, VS7 — is needed at **any** parallel size, because the sampler mismatch has
-nothing to do with sharding. Neither row above has been run; both are code readings against measured
-checkpoint facts `[not tested]`. If you run one, [HELP-WANTED](../HELP-WANTED.md) says what we would
-want reported.
+nothing to do with sharding. The second row has now been run
+([19](19-vision-at-two-ranks.md)); the first is still a code reading `[not tested]`.
+
+**`--mm-encoder-tp-mode data` is not *needed* at two ranks and we shipped it anyway** — it replicates
+the 0.557 GiB tower instead of slicing a 6-bit EXL3 one across ranks, which is a path measured at no
+rank count. The sliced tower is `[not tested]` and it is on [HELP-WANTED](../HELP-WANTED.md);
+[19](19-vision-at-two-ranks.md) §1 and §6 have the trade.
 
 **Four ranks:** nothing measured. 16/4 = 4 heads per rank divides, and the MLP and merger widths
 divide too, so the tower may need only the loader half — but `attn.proj` at 256 per rank is 2 × 128

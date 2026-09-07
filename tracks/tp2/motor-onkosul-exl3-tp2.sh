@@ -6,7 +6,7 @@
 #   * FABRIC_PEERS is ONE address per node, not two. Two nodes are one peer
 #     pair joined by one cable pair; the third node's links are not part of
 #     this cluster and waiting for them would hang the boot.
-#   * the default ENV_FILE is .env.tp2prod-fs (the full-scope candidate).
+#   * the default ENV_FILE is .env.tp2d (candidate D).
 #
 # Everything else is unchanged, deliberately:
 #   1. docker is up and answering
@@ -62,7 +62,7 @@ done
 sync; echo 3 | sudo -n tee /proc/sys/vm/drop_caches >/dev/null 2>&1
 echo "preflight ok: $(( $(date +%s)-t0 )) s, ConnectX-7 4/4, peer: $PEERS"
 
-ENVF=${ENV_FILE:-$HOME/exl3-zeus/.env.tp2prod-fs}
+ENVF=${ENV_FILE:-$HOME/exl3-zeus/.env.tp2d}
 test -f "$ENVF" || { echo "no env file: $ENVF"; exit 1; }
 
 IMG=$(grep -E "^IMAGE=" "$ENVF" | cut -d= -f2)

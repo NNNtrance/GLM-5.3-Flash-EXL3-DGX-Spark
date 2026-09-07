@@ -8,6 +8,12 @@ This repository is a three-node recipe and every default in it is a TP=3 default
 needs padding, so the shape surgery in [03](03-tp3-padding-and-sidecars.md) and the padded-load path
 in [13](13-full-scope-checkpoint.md) §7 are not needed at all.
 
+**As of 8 September 2026 the recommended two-node configuration is candidate D: candidate C plus the
+vision tower and the two upstream backports** — 4 images + 2 videos per request, `HAREM_PREFIX_HIT=1`
+and `HAREM_KPOOL_TAIL_FIX=1`, everything else including the 0.85 memory rung untouched. §5.10 is the
+measurement; [19](19-vision-at-two-ranks.md) is the vision half and the two findings that came out of
+getting it running at two ranks. §5.9 (candidate C) stays as the lineage it grew from.
+
 **As of 6 September 2026 this page describes a complete, measured two-node configuration rather than
 a set of bring-up arms.** There is a named TP=2 production candidate — a patch tree, an environment
 file, a launcher, a fast-load sidecar and an autostart unit — and every row of it was measured on
@@ -138,6 +144,13 @@ at two ranks and we have never measured it `[not tested]`; the preflight will ac
   `MODEL_LINK_TARGET` unset; the identity-mount machinery has nothing to protect.
 - `DRAFT_HOST_PATH` — likewise. The DFlash2 drafter's GQA is 32/8, which divides by two, so the
   32/8 → 36/9 pad that TP=3 needs is not needed and `patch-dflash-tp3.py` is not in the tree.
+  **Point it at a drafter directory of its own, and check the config before the dump boot.** The
+  three-node track applies its pad by *rewriting `config.json` inside the drafter directory* (the
+  original is kept beside it as `config.json.orig`), so a directory shared with a three-node
+  installation carries 36/9 — which does not divide by two, and stops a two-node boot four minutes
+  in with `assert self.total_num_kv_heads % tp_size == 0` `[measured-here]`. The fix is a directory,
+  not a patch: the unpadded config plus a **hard link** to the same `model.safetensors`, which costs
+  nothing on disk. [14](14-troubleshooting.md) §10.5 has the trace and the three commands.
 - **Keep `--hf-overrides` if you serve the full-scope checkpoint.** It is not about padding: that
   checkpoint's inlined quantization config carries no `tensor_storage`, so `cuda-exl3` has to be
   pointed at the standalone file. At TP=2 that file is the checkpoint's own, unrewritten:
@@ -173,7 +186,23 @@ three-node one that is not even mounted.
 ### 2.3 The patch tree
 
 Use [`tracks/tp2/patches/`](../tracks/tp2/patches/). It is the two-node tree, complete, and every file in
-it is documented here:
+it is documented here.
+
+**Candidate D adds four files, and all four are the three-node track's, byte for byte** —
+`patch-vllm-tp3.py`, `patch-vision-tp3.py`, `patch-prefixhit-tp3.py`, `patch-kpooltail-tp3.py`, plus
+three model-free gates and a verifier that are not hashed into the sidecar identity. They are
+*copies*, not forks: [`tracks/tp2/patches/vision/`](../tracks/tp2/patches/vision/README.md) and
+[`tracks/tp2/patches/prefix-hit-and-kpool-tail/`](../tracks/tp2/patches/prefix-hit-and-kpool-tail/README.md)
+are pointers with install commands rather than second copies of the scripts. **Eighteen files
+against the three-node tree's twenty-three.**
+
+**`patch-vllm-tp3.py` is the one that will surprise a reader of the previous version of this page**,
+which listed it under *deliberately not shipped*. Its padding half is still a no-op by arithmetic at
+TP≤2, and it is in the tree anyway, because `patch-vision-tp3.py`'s VS1 anchor is written against
+the text that file's edit 4b produces. Forking the vision patch instead was rejected: that file sits
+in three-node production, its sha256 is printed in its boot log and its content is hashed into the
+production sidecar's identity. The arithmetic, edit by edit, is
+[19](19-vision-at-two-ranks.md) §2 `[measured-here]`.
 
 | File | What it does at two ranks |
 |---|---|
@@ -229,6 +258,8 @@ padded-load capability, which two ranks do not use.
 | `NCCL_MESH_LINKS_PER_PEER` | `0` (auto) with two cables between the pair — **both cables measured carrying ~90 GB each across a sweep** (§5.4); `1` with one cable, which makes `patches/kernel/0005` a no-op |
 | `NCCL_MESH_MIN_RNR_TIMER=1`, `NCCL_MESH_PTR_CUDA=1`, `NCCL_MESH_FLUSH=1` | keep |
 | `CUDA_EXL3_TUNE_CACHE` | keep, and warm it before you measure anything ([12](12-tuner-cache.md)). Warm at two ranks it does what it does at three: round 1 is inside the round-to-round band (§5.6) |
+| `HAREM_PREFIX_HIT=1`, `HAREM_KPOOL_TAIL_FIX=1` | candidate D. Both patch files are the three-node track's and neither reads the rank count; the **block granularity** the first one's ceiling is computed from is **4,608 tokens at two ranks**, not the three-node 3,328 — measure it, do not copy it (§5.10) `[measured-here]` |
+| `HAREM_VISION=1` + `CUDA_EXL3_PACKED_MAPPING` + `LANGUAGE_MODEL_ONLY=0` + four `EXTRA_ARGS` | candidate D's vision half: 4 images + 2 videos per request. Needs `patch-vllm-tp3.py` in the tree, which candidate C did not ship — [19](19-vision-at-two-ranks.md) §2 |
 | `GPU_MEMORY_UTILIZATION` | **0.85**, which is where every TP=2 arm of ours has run. It is *not* production 10's 0.83, and the ladder has never been derived at two ranks — read §6 before moving it |
 | `MAX_MODEL_LEN` | **1,000,000 is reachable with either checkpoint** once the page fix and the settle gate are in place. That is a reversal; see §5.5 |
 
@@ -247,8 +278,11 @@ They differ from the three-node ones in four places and no more:
   has a hardware problem worth failing on even when this cluster does not use them.
 
 **Installed, started, health-checked and stopped on both nodes on 6 September 2026**
-`[measured-here]` — §5.7. It is installed **disabled**: the three-node unit remains the enabled
-autostart on our cluster, and a two-node reboot test has still not been run `[not tested]` (§6).
+`[measured-here]` — §5.7, and **again on 8 September with candidate D**, which is the first time the
+two-node unit brought up the configuration this page recommends: `/health` 200 at **280 s** from
+`systemctl start` on both nodes (§5.10) `[measured-here]`. It is installed **disabled**: the
+three-node unit remains the enabled autostart on our cluster, and a two-node reboot test has still
+not been run `[not tested]` (§6).
 
 And the reboot rule becomes "reboot **both** together, never one". The preflight checks only its own
 node's fabric, so a single-node reboot passes it and starts a rank into a cluster whose peer is gone
@@ -819,28 +853,164 @@ difference is 2,128,571 − 1,817,857 = **+310,714** tokens; adding it to the bo
 
 ---
 
-## 5b. The vision tower at two ranks — divisible, and still not free `[not tested]`
+### 5.10 Candidate D — vision and the two backports at two ranks, measured 8 September 2026
 
-Two ranks is the easy case for *splitting* the tower and it changes nothing about *loading* it.
+**The recommended configuration.** Candidate C plus three things that had only ever run at three
+ranks: the **vision tower** (4 images + 2 videos per request), **`HAREM_PREFIX_HIT=1`** and
+**`HAREM_KPOOL_TAIL_FIX=1`**. Nothing else moves — same checkpoint, same image, same kernels, same
+**0.85**, same indexer bound, same fp8 draft cache, same k=7.
 
-**Divisibility is clean.** Heads 16/2 = 8, `attn.proj` 512 = 4 × 128, the MLP 2048 = 16 × 128, the
-merger 2048 = 16 × 128 and its context 5120 = 40 × 128. No padding, and
-**`--mm-encoder-tp-mode data` is not needed** — that flag is TP=3's own, because at three ranks
-nothing in the tower divides at all ([18](18-vision-at-three-ranks.md) §1.1).
+The vision half has a page of its own: [19](19-vision-at-two-ranks.md), including the two findings
+that came out of getting it running (a patch file the two-node tree deliberately did not ship, and a
+drafter `config.json` carrying the three-node pad). The backport half is
+[`tracks/tp3/patches/prefix-hit-and-kpool-tail/`](../tracks/tp3/patches/prefix-hit-and-kpool-tail/README.md)
+and [`results/gates/prefix-hit-and-kpool-tail.md`](../results/gates/prefix-hit-and-kpool-tail.md).
 
-**What you still need depends on the checkpoint, not the rank count.**
+**Settings.** As §5.1, plus `HAREM_VISION=1`,
+`CUDA_EXL3_PACKED_MAPPING={"qkv_proj":["q_proj","k_proj","v_proj"]}`, `LANGUAGE_MODEL_ONLY=0`,
+`--mm-encoder-tp-mode data`, `--mm-processor-kwargs {"max_pixels":12544000,"max_image_tokens":8000}`,
+`--limit-mm-per-prompt {"image":4,"video":2}`, `--mm-processor-cache-gb 0`, `HAREM_PREFIX_HIT=1`,
+`HAREM_KPOOL_TAIL_FIX=1`. Speed is the median of three sweep rounds on a warm tuner cache,
+temperature 0, reasoning effort `low`. **One boot** `[measured-here]`.
 
-| Checkpoint | What it takes |
+#### The block granularity at two ranks is 4,608 tokens, not 3,328
+
+This is the one number in either backport that depends on the rank count, and the three-node page
+said to measure it rather than copy it. Measured: the greatest common divisor of the observed hit
+counts, **gcd(4,608, 55,296) = 4,608**.
+
+#### The A/B, one environment line apart, on one boot each `[measured-here]`
+
+Same tree, same sidecar, the two knobs on and off. This is the comparison that carries weight; the
+candidate-C rows further down are a different session.
+
+| Scenario | knobs **off** | knobs **on** | ceiling at G = 4,608 |
+|---|---:|---:|---:|
+| Exact repeat, 8,008 tokens | **0.0 %** | **57.54 %** | 57.54 % — **the ceiling** |
+| Four-turn agent, ~8.0K, every turn | **0.0 %** | 57.28 % | 57.28 % — **the ceiling** |
+| Exact repeat, 59,910 tokens | 92.30 % | 92.30 % | 99.99 % |
+| Repeat TTFT, 8K | 5.60 s | **2.55 s** | −54 % |
+| KV pool | 2,592,857 | 2,585,714 | −0.28 %, i.e. the knobs are free |
+
+**At two ranks this defect costs the whole hit, not half of it.** The mechanism is the same as at
+three ranks — the coordinator's "no group flagged → flag every group" fallback drops exactly one
+block off every exact-repeat prefix hit — but one block is 4,608 tokens here, and an 8,008-token
+prompt only has one block's worth of hit to give. Three ranks lost 41.56 points of 83.12; two ranks
+lose **all 57.54**.
+
+**The 59,910-token row does not move at either rank count, and the reason is now confirmed twice.**
+That prompt ends **6 tokens** past 59,904 — which is 18 × 3,328 *and* 13 × 4,608, a common multiple.
+With no whole block left beyond the boundary the drop has nothing to take from the drafter and both
+arms settle one block short. The three-node hypothesis, tested at a different granularity, holds.
+
+#### The cached-path equality test at two ranks — 24/24 `[measured-here]`
+
+The test that settled the three-node promotion, re-run here: 24 needle-style prompts, eight each at
+three size classes, each with its own filler seed, **asked cold and then repeated byte-for-byte**
+with the prefix-cache counters read either side so a repeat is *proved* to be a hit.
+
+| Size class | n tokens | repeat hit | cold → repeat | identical | correct |
+|---|---|---|---|---|---|
+| ~11K | 11,213–11,366 | **81.1–82.2 %** (the ceiling for that length) | 7.9 s → **1.7 s** | 8/8 | 8/8 |
+| ~83K | 82,859–83,359 | **94.2–94.4 %** | 55.3 s → **3.8 s** | 8/8 | 8/8 |
+| ~177K | 176,763–177,436 | **98.7–99.1 %** | 118.3 s → **2.0 s** | 8/8 | 8/8 |
+
+**24 of 24 repeat answers byte-identical to their cold answers and correct on both passes.** Mean
+repeat hit 91.7 % against 0.0 % cold; zero "differing but both correct", zero wrong, zero repeats
+that failed to hit.
+
+#### Gates, speed and the vision cases
+
+| | Candidate C (6 Sep) | **Candidate D** (8 Sep) | Δ | band |
+|---|---:|---:|---:|---|
+| **KV pool at 1M** | 2,692,857 | **2,585,714** | **−4.0 %** | one boot each |
+| Maximum concurrency at 1M | 2.69× | **2.59×** | | |
+| Available KV, rank 0 / rank 1 | 21.31 / 20.33 GiB | **20.15 / 19.54** GiB | −1.16 / −0.79 | |
+| C1 aggregate · per stream | 60.08 · 65.96 | **59.45 · 64.45** | −1.0 % · −2.3 % | ±4 % |
+| C2 / C4 / C6 aggregate | — | 81.37 / 115.06 / 134.35 | — | ±9 % at C4 |
+| C8 aggregate | 157.71 | **155.47** | −1.4 % | ±3 % |
+| TTFT, C1 / C8 | 0.381 / 1.054 s | 0.375 / 1.080 s | equal | |
+| Draft acceptance, C1 / C8 | ~60.4 / 61.3 % | 60.33 / 62.59 % | equal | ±2 pt |
+| Prefill, fresh unseen ~8.4K | 1,414 tok/s | **1,413 · 1,403** | equal | ±3 % |
+| Probe · code · tool-call · needle-lite | 10/10 · 12/12 · 8/8 · 6/6 | 10/10 · 12/12 · 8/8 · **6/6 ×3** | equal | |
+| Vision gates | refuses the request | **6/6** | — | |
+| Boot, fast-load, **through the unit** | 272 s by hand | **280 s** | +8 s | |
+| One-off dump boot | 956 s | **1,013 s** | +57 s | |
+| Sidecar per rank | 78 GB, 32 files | **79 GB, 32 files** | +1 GB | |
+| CUDA graphs | 19 PIECEWISE + 8 FULL | **19 + 8 + 8 DFlash2** | still captured | |
+
+The six vision gates, one request at a time: four single images **4/4**; four images in one request,
+described **in order**, 2,612 prompt tokens; one video, colour/shape/motion correct; two videos,
+both correct and in order; **4 images + 2 videos in one request, 5,991 prompt tokens, all six items
+correct**; a third video refused with **HTTP 400** and the engine alive afterwards.
+
+#### The K-pool soak and the worst case for host memory `[measured-here]`
+
+Four concurrent 4,096-token generations: all four filled their budget, all coherent, no error, engine
+alive — 16,384 tokens in 3.7 minutes. Host memory sampled every 5 s on both nodes throughout
+(582 samples): rank 0's `MemAvailable` floor **4.97 GiB**, swap used flat at **0.059 GiB**, and
+**zero pages swapped out**.
+
+Then the adversarial case, which is what the owner's rule actually asks for — harm means slowdown,
+errors or leaving the safe zone, not the presence of swap. A **4-image + 2-video request fired during
+a C8 text sweep**, which puts the multimodal frontend and eight decode streams on rank 0 together:
+
+| | |
 |---|---|
-| `brandonmusic/GLM-5.3-Flash-tr3-4bpw` (routed experts only) — the tower is dense BF16 | `LANGUAGE_MODEL_ONLY=0` and the per-request limits, plus VS4/VS6/VS7 for video. Nothing else |
-| `turboderp/GLM-5.3-Flash-exl3` at 4.05 bpw (full scope) — **the recommended two-node candidate**, §5 | The **same** VS1/VS2/VS3 and the same `CUDA_EXL3_PACKED_MAPPING` as at three ranks: the tower is 6-bit EXL3 and vLLM builds it with `quant_config=None` regardless of how many ranks you have |
+| Text arm during the multimodal request | **141.03** tok/s against 155.47 alone — **−9.3 %** (three ranks: −12.7 % on the same test) |
+| Multimodal request | correct, **10.71 s**, 5,991 prompt tokens |
+| Rank 0 `MemAvailable` floor | **4.90 GiB** |
+| Rank 0 swap used / pages in / pages out | 0.059 GiB flat / **0** / **0** |
+| Rank 1 | 7.28 GiB floor, 0.001 GiB swap, zero paging |
 
-**And the video half is needed at any rank count**, because the frame-sampler mismatch it fixes is
-upstream's and has nothing to do with sharding ([18](18-vision-at-three-ranks.md) §4;
-[vllm#55644](https://github.com/vllm-project/vllm/issues/55644)).
+**No harm by that definition.** The −9.3 % is contention and is attributable: `--max-num-seqs 8`
+means a ninth request queues and a 5,991-token prefill takes slots. **Not attributed:** how much of
+it is *multimodal* rather than "a ninth request with a long prefill" — a text request of the same
+prefill length was not run, exactly as at three ranks `[not tested]`.
 
-Neither row has been run. Both are readings of code against measured checkpoint facts `[not tested]`.
-If you run one, [HELP-WANTED](../HELP-WANTED.md) says what we would want reported.
+#### What it cost, and the line is not left empty
+
+1. **KV pool, −4.0 %** (−107,143 tokens ≈ 0.81 GiB at the two-node rate of ~132,700 tokens/GiB). The
+   A/B above shows the two backports account for 0.28 % of that, so **the tower is the cost**. Called
+   a cost rather than noise on purpose: this configuration has one boot and candidate C's own
+   boot-to-boot spread at two ranks was never measured `[not tested]`.
+2. **One dump boot and a bigger sidecar.** 1,013 s and 79 GB per rank. Adding files to a patch tree
+   changes the fast-load identity; budget it.
+3. **A second dump boot, which was ours to avoid.** The first one died on the drafter's padded
+   config four minutes in (§2.1, [14](14-troubleshooting.md) §10.5). Fix the drafter directory
+   *before* the dump.
+4. **`prefill-7k.py` is no longer a prefill measurement here.** It times the *second* copy of one
+   prompt, and with `HAREM_PREFIX_HIT=1` that copy now comes largely out of the cache: it read
+   **2,602 tok/s** against a fresh-prompt 1,413. The style guide already says a repeated prompt is
+   not a prefill measurement; the backport makes the gap wide enough to mislead anyone who forgets.
+   Use [`bench/prefill-fresh.py`](../bench/prefill-fresh.py).
+5. **MMLU was not re-run** `[not tested]`. Candidate B's 86.02 ±0.75 on the same checkpoint and stack
+   is still the standing figure; the tower changes no language-model weight.
+6. **One measurement was taken wrong and is recorded rather than quietly dropped.** The first fresh
+   prefill reading, 1,120 tok/s, was taken while another probe was running against the same engine.
+   Alone, twice: 1,413 and 1,403. One measurement at a time, or the number is fiction.
+
+---
+
+## 5b. The vision tower at two ranks — measured, and the page is now [19](19-vision-at-two-ranks.md)
+
+**Run on 8 September 2026 `[measured-here]`.** This section was a code reading; it is kept because
+two of its three claims survived and one did not, and because a reader who followed it would have
+hit a wall it did not name.
+
+| What this section said | What running it showed |
+|---|---|
+| "Divisibility is clean" — heads 16/2, `attn.proj` 512, MLP and merger 2048, context 5120, all whole 128-blocks per rank | **Right**, and not the part that mattered. Dividing means *slicing a 6-bit EXL3 tower*, which nothing here has measured. We shipped `--mm-encoder-tp-mode data` anyway and replicated the 0.557 GiB tower. The sliced tower stays `[not tested]` |
+| "`--mm-encoder-tp-mode data` is **not** needed" | **Right, and we used it.** The reasoning is [19](19-vision-at-two-ranks.md) §1 |
+| The full-scope row: "the **same** VS1/VS2/VS3 and the same `CUDA_EXL3_PACKED_MAPPING`… Nothing else" | **Wrong by one file.** VS1's anchor is written against the text `patch-vllm-tp3.py`'s edit 4b produces, and §2.3 listed that file under *deliberately not shipped*. The two-node tree now carries it, byte-identical with the three-node one. [19](19-vision-at-two-ranks.md) §2 `[retracted]` |
+| The routed-experts-only row | Still a code reading `[not tested]` |
+
+**And one thing no page saw:** the drafter directory carries the three-node 36/9 pad, written into
+its `config.json` in place, which stops a two-node boot with an assertion four minutes in. §2.1 and
+[14](14-troubleshooting.md) §10.5.
+
+The measurements are §5.10; the vision half in full, including the six gates and what the tower
+cost, is [19](19-vision-at-two-ranks.md).
 
 ---
 
@@ -851,12 +1021,15 @@ This list is much shorter than it was, and every row now carries a reason rather
 | Not run at TP=2 | Why not, and what it would take |
 |---|---|
 | **The `gpu-memory-utilization` ladder.** Every TP=2 arm ran **0.85** | This is the one deliberate refusal. KV maximisation is the last step in this project's order of work and it needs the cluster's owner, not an agent. It also has a two-node-specific warning attached: arm A recorded **3.5 GB of swap on the head during weight load** at this rung (§3.1), and the three-node ladder was climbed rung by rung on 6 September against swap *traffic* under load, which took it to 0.88 ([11](11-open-issues.md) §2.4). The three-node ladder must be **re-derived** at two ranks, not copied — the memory left after a fixed cost is not linear in the node count `[not tested]` |
-| **A two-node reboot test** | The unit is installed and start/stop-tested (§5.7), but a power-on trial takes the cluster down and the three-node unit is the enabled production autostart. Reboot **both** nodes or neither: the preflight passes on a single node whose peer is gone `[not tested]` |
+| **A two-node reboot test** | The unit is installed and start/stop-tested (§5.7) and has now brought up candidate D from `systemctl start` on both nodes (§5.10), but a power-on trial takes the cluster down and the three-node unit is the enabled production autostart. Reboot **both** nodes or neither: the preflight passes on a single node whose peer is gone `[not tested]` |
+| **The vision tower *sliced* across the two ranks** | Every width divides, and slicing would halve the tower's per-rank footprint — 0.28 GiB of a measured 0.81 GiB cost. It also means slicing a 6-bit EXL3 tower, a path measured at no rank count, so we replicated instead. Decide it **before** the dump boot: the sidecar stores post-load tensors and the fast-load identity does not hash the command line `[not tested]` (§5.10, [19](19-vision-at-two-ranks.md) §6) |
+| **A second boot of candidate D**, and therefore the boot-to-boot spread that would separate "the tower" from "this boot" in the −4.0 % pool row | Every candidate-D figure is one boot. The A/B inside it (knobs on versus off, same tree, same sidecar) is a real same-session comparison; the comparison against candidate C is not `[not tested]` |
+| **Images and video under concurrency, beyond one adversarial case** | §5.10 ran one 4-image + 2-video request during a C8 sweep. A sustained multimodal load was not run `[not tested]` |
 | **Expert parallelism at two ranks** | Legal (§1.1), never measured. It changes which kernel path the MoE stage takes ([05](05-expert-parallel-and-cuda-exl3-fixes.md)) and `tracks/tp2/patches/` already carries `patch-epfilter-tp3.py` so that trying it needs no tree change — and therefore no new dump boot `[not tested]` |
 | **A second boot of each candidate**, and a boot-to-boot spread | Every number in §5 is a median of three rounds on **one** boot per candidate. At three ranks the boot-median spread is C1 1.1 %, C8 2.5 %, **C4 7.4 %**. The pool, memory, boot-time and gate rows are far too large a difference to be boot noise; the speed rows carry that uncertainty and the B-over-A margins (+13 to +21 %) clear it comfortably `[not tested]` |
 | **`patch-vllm-tp3.py` at two ranks** | A no-op by arithmetic (§1.1), deliberately not shipped, therefore never measured. If you keep one tree for both rank counts you will run it; we do not expect a difference and we have not shown one `[not tested]` |
 | **Why the bounded arm's five concurrency levels all moved the same way** (§5.9) | Inside band, mean −2.0 %, and mixed-signed at three ranks. No clock, temperature or power telemetry was sampled during either arm, and the arms ran in a fixed order 25 minutes apart, so neither thermal drift nor anything else can be ruled in or out. Repeat with the arm order reversed and per-arm telemetry `[not tested]` |
-| **MMLU on candidate C** | It changes no weight and no kernel — only a scratch buffer's size — and the short gates were taken as sufficient. Candidate B's 86.02 ±0.75 on the same checkpoint and stack stands `[not tested]` |
+| **MMLU on candidate C or D** | Neither changes a language-model weight or a kernel — one is a scratch buffer's size, the other adds a vision tower and two KV-bookkeeping fixes — and the short gates were taken as sufficient. Candidate B's 86.02 ±0.75 on the same checkpoint and stack stands `[not tested]` |
 | **Anything at one or four nodes** | Out of scope for this page; [00-start-here](00-start-here.md) says what we can and cannot say about other node counts |
 
 Two rows that used to live here are gone: the fast-load sidecar and the dual-cable plugin patch are
