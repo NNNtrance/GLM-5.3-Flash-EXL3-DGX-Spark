@@ -355,6 +355,59 @@ offered upstream with its description in `patches/kernel/0003-PR-DESCRIPTION.md`
   docstring, and the thread is answered.
 - **Licence:** not applicable — we vendor nothing of his. What we took is a correction.
 
+### [Victor Cruz (@vcruz305)](https://github.com/vcruz305) — the K-pool tail, diagnosed and fixed before we looked
+
+- **What we owe him:** the whole of the K-pool tail item —
+  [`tracks/tp3/patches/prefix-hit-and-kpool-tail/`](tracks/tp3/patches/prefix-hit-and-kpool-tail/README.md)
+  §2 and [docs/11](docs/11-open-issues.md) §2.33. `KpoolTailSpec` allocates one block per request and
+  is addressed circularly, but its slot mapping is produced by the generic paged kernel against a row
+  whose only written column is 0, so concurrent requests collapse onto one tail block and, past the
+  row width, the kernel reads outside it. He found it, wrote the reproducer, and established that the
+  correct mapping was already in the tree and was being skipped because the hybrid
+  attention-metadata path never passes `positions`. Both edits in our `patch-kpooltail-tp3.py` are
+  his: the missing `positions=` argument in `model_states/mamba_hybrid.py`, and writing the corrected
+  mapping in place rather than returning a clone whose address CUDA-graph capture pins.
+- **What he saved us from doing wrong:** the brief we started from said to clamp the block index
+  inside the generic slot kernel. His notes record that he tried exactly that and it changed nothing
+  — 48 overrunning calls before and 48 after — because once positions are present the tail mapping
+  does not come from that kernel at all `[reported]`. He also records the measurement trap: Python
+  instrumentation inside a CUDA-graph-captured op runs at capture and never again, so only
+  device-updated counters are evidence there. We serve eager, so our detector is host-side and says
+  so.
+- **Where:** `vcruz305/GLM-5.3-Flash-EXL3-K2-DGX-Spark-recipe`, `docs/KPOOL_TAIL_BUG.md` and
+  `scripts/patch_kpool_tail_positions.py` / `scripts/patch_kpool_tail_detector.py`, 30 August 2026.
+- **Licence:** we vendor nothing of his. What we took is a diagnosis and a two-line mechanism, both
+  re-implemented against our own anchors and gated by our own environment knob.
+
+### vLLM upstream — the hybrid prefix-cache hit
+
+- **What we use it for:** the first half of
+  [`tracks/tp3/patches/prefix-hit-and-kpool-tail/`](tracks/tp3/patches/prefix-hit-and-kpool-tail/README.md).
+  Our pinned tree predates three changes, and the shape of our fix is theirs:
+  - [#52047](https://github.com/vllm-project/vllm/pull/52047),
+    [@okorzh-amd](https://github.com/okorzh-amd), merged 29 August 2026 — generalises the
+    DeepSeek-V4-only `_annotate_eagle_groups_deepseek_v4` into a marker-driven
+    `_annotate_eagle_groups`, and warns when speculative decoding leaves every group unannotated,
+    which is precisely the state our grouping path was in.
+  - [#54041](https://github.com/vllm-project/vllm/pull/54041),
+    [@positive666](https://github.com/positive666), 27 August 2026, closed — the idea we took: mark
+    the drafter's group as the EAGLE group **only** when every draft layer is sliding-window, and
+    leave a mixed drafter on the conservative fallback. Our patch enforces that precondition.
+  - [#53388](https://github.com/vllm-project/vllm/pull/53388),
+    [@ZeldaHuang](https://github.com/ZeldaHuang), merged 1 September 2026 — the
+    `disable_eagle_block_drop` speculative option, which we carry as a diagnostic arm rather than a
+    production setting.
+  - [#53906](https://github.com/vllm-project/vllm/pull/53906),
+    [@ZJY0516](https://github.com/ZJY0516), crediting **JaredforReal** — the GLM-5.3-Flash support
+    this whole stack is built on, including the K-pool machinery and
+    `tests/v1/attention/test_kpool_tail_slot_mapping.py`, which pins the addressing our own unit test
+    re-checks against this image's tree.
+- **The reporters:** [@Suppressor72](https://github.com/Suppressor72), whose
+  [issue #53670](https://github.com/vllm-project/vllm/issues/53670) is the throughput report behind
+  the three prefix-cache pull requests, and **UserHIJ**, who reported the same class of failure.
+- **Licence:** **Apache-2.0**, as above. We carry the mechanism, not the diff: our grouping path is
+  not upstream's, so the anchors are ours.
+
 ### `autoscriptlabs/nccl-mesh-plugin` — the fabric transport
 
 - **What we use it for:** NCCL over three direct ConnectX-7 links with no switch. Without it there is

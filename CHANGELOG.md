@@ -11,6 +11,54 @@ rounds, which is what the persisted MLA tuner cache bought — see
 
 ---
 
+## 2026-09-08 — Two upstream backports, measured; neither promoted, and the gate that judged them has a flake rate
+
+**No change to the production configuration.** `.env.tp3` was never edited — verified byte-identical
+to its dated backup on all three nodes at the end — and the production patch tree and its fast-load
+sidecar were never touched. New patch tree, both knobs default off:
+[`tracks/tp3/patches/prefix-hit-and-kpool-tail/`](tracks/tp3/patches/prefix-hit-and-kpool-tail/README.md).
+Results: [`results/gates/prefix-hit-and-kpool-tail.md`](results/gates/prefix-hit-and-kpool-tail.md).
+Standing items: [docs/11](docs/11-open-issues.md) §2.32 and §2.33.
+
+**Two real bugs, found and measured.** The hybrid prefix-cache annotation: nothing on this model's
+grouping path ever sets `is_eagle_group`, so the coordinator flags **every** group and the EAGLE
+last-block drop costs **exactly one 3,328-token block off every exact repeat** — an 8,008-token
+repeat hits 41.56 % where the ceiling is 83.12 %. The patch takes it to **83.12 %, the ceiling**, and
+follow-up TTFT from **2.830 s to 1.076 s, −62.0 %**; a four-turn agent conversation goes with it.
+The K-pool tail slot mapping: `positions` never reaches the tail's metadata builder on a hybrid
+model, so **99.67 % of the tail's writes address a block that is not the request's own**, the worst
+of them outside every block any request holds. The patch takes that to **0.00 %**. Both
+`[measured-here]`.
+
+**Neither was promoted, and the reasoning is worth more than the patches.** The prefix-cache half
+missed its acceptance bar — a *raw* 95 % hit, which the 3,328-token granularity makes unreachable at
+8K — and the 60K case did not move, because its offset past the aligned boundary is 6 tokens and the
+drafter's own drop then costs a full block on re-alignment. Separately, one boot of the both-knobs
+arm returned needle-lite **5/6** twice; six later runs of that configuration returned 6/6, including
+under concurrency and after an identical 48,910-token soak.
+
+**And then the gate turned out to be flaky.** The rollback was decided partly on the K-pool arm
+losing the code exam's `matrix` item after a soak. Twenty minutes later, on the restored
+**unpatched** production, the first code exam came back **11/12 — `matrix`, the same assertion** —
+and the four runs after it were 12/12. `matrix` failed 2 of 12 code exams that session, once with no
+patch tree present. That evidence is withdrawn, and the conclusion is not about either patch: **we
+adjudicated two changes with gates whose own flake rate we had never measured.** A gate baseline is
+now [HELP-WANTED](HELP-WANTED.md) §12, ahead of the reproduction it would serve.
+
+**One correction to a published diagnosis, ours to make because it is our build.** vcruz305 describes
+the K-pool tail's block-table row as one entry wide, so that `pos >= block_size` reads past it. Our
+runner sizes that row `cdiv(max_model_len, block_size)` = **250,016 entries**: no out-of-row read
+happens at all, and our detector counts zero row overruns while the mapping is wrong for 99.67 % of
+tokens. The harm is the wrong block, not the overrun — and on this build there is nothing for a clamp
+to clamp, which is the second independent reason the clamp is the wrong layer.
+
+**What it cost:** one 495 s dump boot and a ~53 GB-per-node fast-load sidecar, which stays on disk
+alongside the production one, so arming either arm later is an environment line and no dump.
+Restoring production was `systemctl start`: `/health` 200 at **255 s**, KV pool **7,066,115**, probe
+10/10, tool-call 8/8, needle 6/6, vision 5/5.
+
+---
+
 ## 2026-09-07 — Vision at three ranks: the tower comes back, the video sampler bug, and 4 images + 2 videos per request
 
 **Production configuration 13.** Configuration 12 with the vision tower **on**. Six environment lines

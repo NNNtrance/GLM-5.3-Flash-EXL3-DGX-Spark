@@ -1614,6 +1614,79 @@ production 12's ~62 %. The code permitted this and nothing had demonstrated it.
 
 ---
 
+### 2.32 The hybrid prefix-cache hit — nothing flags the drafter, so everything gets flagged
+
+**OPEN. Measured on 8 September 2026 and NOT in the recipe.** Patch, mechanism and full numbers:
+[`tracks/tp3/patches/prefix-hit-and-kpool-tail/`](../tracks/tp3/patches/prefix-hit-and-kpool-tail/README.md),
+[`results/gates/prefix-hit-and-kpool-tail.md`](../results/gates/prefix-hit-and-kpool-tail.md).
+
+`KVCacheCoordinator.__init__` collects the KV cache groups carrying `is_eagle_group` and, when
+speculative decoding is on and that set is empty, conservatively flags **all** of them. The only
+function in this image that ever sets the flag is `_annotate_eagle_groups_deepseek_v4`, which
+requires `model_version == "deepseek_v4"` and is reached from one branch of `get_kv_cache_groups`.
+GLM-5.3-Flash with a DFlash2 drafter takes a different branch — the one this recipe added, which
+groups the target and the draft separately ([docs/04](04-dflash2-port.md)) — so no group is ever
+flagged and the fallback has fired on every boot this stack has run.
+
+What it costs, measured on the production configuration before anything changed `[measured-here]`:
+an exact repeat of an 8,008-token prompt hits **41.56 %** against a **83.12 %** ceiling, and of a
+59,910-token prompt **94.43 %** against 99.99 %. The loss is **exactly one 3,328-token block**, in
+every scenario, on every repeat. With the patch: 83.12 % at 8K — **the ceiling** — and follow-up TTFT
+from 2.830 s to **1.076 s, −62.0 %**; a four-turn agent conversation goes the same way.
+
+**Why it is not in the recipe.** Two reasons, neither of them "it does not work". The acceptance bar
+was a *raw* hit ratio of 95 %, which the 3,328-token granularity makes unreachable at 8K, and the
+60K case did not move at all — its offset past the aligned boundary is 6 tokens, so the drafter's own
+drop has no block to give back and costs a full 3,328 on re-alignment (about 7.7 % of prompt lengths
+are in that window). And one boot of the both-knobs arm returned needle-lite 5/6 twice; six later
+runs of the same configuration returned 6/6, so it is unreproduced rather than refuted. See §2.33 for
+the gate-flake finding that narrowed, but did not eliminate, that concern.
+
+**If this stack rebases onto a vLLM carrying #52047**, our anchor disappears and the right move is
+#54041's marker — `non_causal_multi_token_decode` on the drafter's `SlidingWindowSpec` — not to
+re-add ours. The patch fails closed on a drifted anchor, so it cannot pass silently.
+
+### 2.33 The K-pool tail slot mapping — a real correctness bug, measured, and still not shipped
+
+**OPEN. Not ours:** found, reproduced and fixed by [vcruz305](https://github.com/vcruz305)
+([CREDITS](../CREDITS.md)) on the same base image in August. We had been serving it for a fortnight.
+
+`KpoolTailSpec` is a one-block circular scratch cache — `max_num_blocks_per_req() == 1`,
+`block_size == index_kpool == 4` — addressed as `block_table[req, 0] * kpool + pos % kpool`. Its slot
+mapping is produced by the generic per-group paged kernel, which indexes
+`block_table[req, pos // block_size]`; only column 0 of that row is ever written, so from `pos >= 4`
+the mapping addresses a block that is not the request's own, and neither kpool write kernel
+bounds-checks it. The corrected mapping is already in the image and is skipped because
+`v1/worker/gpu/model_states/mamba_hybrid.py` calls `build_attn_metadata(...)` without `positions=`
+while `model_states/default.py` passes it. Every hybrid model is affected.
+
+Measured on our own engine with a counter on the mapping the engine actually uses `[measured-here]`:
+`positions` reached the tail builder on **0 of 896** steps; **15,578 of 15,630** tail tokens —
+**99.67 %** — addressed a block that was not the request's own; the worst block written was **332**
+against a largest-owned block of **275**, so those writes land outside every ring any request holds.
+With the fix: **0 of 16,806**, worst block 275, positions on 896 of 896 steps. A model-free unit test
+in the serving image pins the same thing 4/4.
+
+**One detail of the published diagnosis does not hold here.** vcruz305 describes the block-table row
+as one entry wide, so that `pos >= block_size` reads past it. Our runner sizes that row
+`cdiv(max_model_len, block_size)` = **250,016 entries**, so there is no out-of-row read at all and
+our detector counts zero row overruns while the mapping is wrong for 99.67 % of tokens. The harm is
+the wrong block, not the overrun — and on this build there is nothing for a clamp to clamp, which is
+the second independent reason the clamp is the wrong layer (his own measurement, that it changed
+nothing, is the first).
+
+**Why it is not in the recipe.** Its own arm was clean on everything except the battery run after a
+soak, which lost the code exam's `matrix` item — and that item then failed on the **restored,
+unpatched production** on its first run and passed four times after, so it is a flaky item and is
+withdrawn as evidence. The honest position is that the K-pool half has no demonstrated cost and one
+night is not three boots. It is the first thing to promote when the reproduction is done.
+
+**What this session actually established, and it is not about either patch.** We adjudicated two
+changes with gates whose own flake rate nobody had measured. `matrix` failed 2 of 12 code exams,
+including once with no patch tree present. **A gate baseline — every gate, ten runs, cold and after a
+soak, on the production configuration — is now the cheapest useful measurement on the list**
+([HELP-WANTED](../HELP-WANTED.md) §12).
+
 ## 3. Never run
 
 | What | Why not |

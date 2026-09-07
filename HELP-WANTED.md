@@ -552,6 +552,37 @@ at +1.75 %, and the three-round median could not resolve it against a 3.5–10.7
 **which is the finding, and it is written down as one**. A fix on our side would still be a new patch
 file, which re-dumps the fast-load sidecar ([docs/08](docs/08-fast-boot.md)); it is not being written.
 
+## 12. A flake baseline for the quality gates, and three boots each for two measured patches
+
+**This is the cheapest useful item on this page and it is embarrassing that it is here.** On
+8 September we measured two upstream backports — the hybrid prefix-cache annotation and the K-pool
+tail slot mapping, [docs/11](docs/11-open-issues.md) §2.32 and §2.33 — against the gates this
+repository publishes, and then discovered that one of those gates has a flake rate nobody had ever
+measured. The code exam's `matrix` item failed **2 of the 12** runs in that session, one of them on
+the restored, unpatched production configuration. Two accidental data points on a flake rate were
+enough to overturn half of a promotion decision.
+
+**Part one, and it needs no patch at all.** On whatever configuration you serve, run each gate — the
+correctness probe, the code exam, the tool-call gate, needle-lite — **ten times cold and ten times
+after a ~49,000-token soak**, and publish the per-item pass rate. Ours are in `scripts/` and
+`tracks/tp3/patches/prefix-hit-and-kpool-tail/`. A single-item drop in a twelve-item exam means
+nothing until that number exists, and every A/B this repository has published against those gates
+would be sharper with it.
+
+**Part two.** Three boots each of four arms — control, `HAREM_KPOOL_TAIL_FIX=1`,
+`HAREM_PREFIX_HIT=1`, both — with the full battery cold, a soak, and the full battery again. Twelve
+batteries, about four hours, judged against the baseline from part one. What we are looking for is
+one unreproduced observation: on one boot of the both-knobs arm, needle-lite returned 5/6 twice
+(the earliest of six needles in a 54,694-token haystack, answered with an invented code), and six
+later runs of that same configuration returned 6/6, including under concurrency and after an
+identical soak.
+
+If the arms match the baseline, the K-pool half fixes a measured correctness bug at no measured cost
+and should go in; the prefix-cache half doubles the exact-repeat hit at 8K and cuts follow-up TTFT by
+62 %, and its acceptance bar should be restated in ceiling terms because a raw 95 % is unreachable at
+that prompt length. Everything needed is in the repository: both patch scripts, the detector, the
+probe, the soak and the unit tests.
+
 ## What we would rather you did not send
 
 Repeated from `CONTRIBUTING.md` because it is the shortest way to save your afternoon:
