@@ -66,13 +66,18 @@ Three things to know before you start, all of them on that page:
 
 ## 3. Three nodes — the TP=3 track
 
-The [README quick start](../README.md) is eleven steps, each ending in a check. Do not skip the
+The [README quick start](../README.md) is eleven steps and one optional, each ending in a check. Do not skip the
 checks: on this stack the expensive failures are the silent ones.
 
 The three pages that are TP=3's own are [03](03-tp3-padding-and-sidecars.md) (why an EXL3 tensor
 cannot be split three ways, and the shape surgery that makes it possible anyway),
 [13](13-full-scope-checkpoint.md) §7 (the padded-load port, which is the production recipe) and
 [`tracks/tp3/patches/`](../tracks/tp3/patches/README.md).
+
+A fourth since 7 September 2026: [18](18-vision-at-three-ranks.md), the **vision tower**. The
+production configuration accepts 4 images and 2 videos per request, and at three ranks that took a
+replication flag rather than the padding this stack uses everywhere else, because nothing in the
+tower divides by three.
 
 ---
 
@@ -114,6 +119,7 @@ Every `docs/NN-*.md` page carries an **Applies to** badge on its first line. Thi
 | [15 — Running this recipe at TP=2](15-tp2-track.md) | **TP=2 only** | The two-node track |
 | [16 — Comparison with other published recipes](16-comparison-with-published-recipes.md) | **both tracks** | §3 is two nodes, §4 is three, §4.4 is four |
 | [17 — The memory ledger](17-memory-ledger.md) | **both tracks** | The ledger is the three-node arrangement; §6 is the two-node column, and the KDA state finding is worse at two ranks than at three |
+| [18 — Vision at three ranks](18-vision-at-three-ranks.md) | **TP=3** | The vision tower, on: 4 images + 2 videos per request. The loader half is a checkpoint property and applies at any rank count; the replication flag is TP=3's own; §11 is the two-node note `[not tested]` |
 
 And the directories:
 
@@ -124,6 +130,7 @@ And the directories:
 | [`patches/kernel/`](../patches/kernel/) | **both tracks** | The mesh plugin patches. `0005` is a no-op with one cable per pair |
 | [`patches/dflash2-port/`](../patches/dflash2-port/) | **both tracks** | The drafter port into the image |
 | [`patches/indexer-overlay/`](../patches/indexer-overlay/) | **both tracks** | The GB10 top-k overlay. Mandatory at any node count |
+| [`tracks/tp3/patches/vision/`](../tracks/tp3/patches/vision/README.md) | **TP=3 as written** | The vision patch, its three model-free gates and the prelude hook. The video half (VS4/VS6/VS7) fixes an upstream bug and is needed at **any** rank count |
 | [`results/`](../results/README.md) | **both tracks** | Each file's header names its arm and its rank count |
 | [`charts/`](../charts/) | **TP=3** | Generated from the three-node CSVs |
 | [`audit/`](../audit/README.md) | **both tracks** | Compare your numbers against ours; the bands are three-node |
@@ -137,7 +144,7 @@ And the directories:
 - [09 — Measurement protocol](09-measurement-protocol.md), before you measure anything. Boot-to-boot
   spread on this stack is **up to 16 % on C8** with nothing changed at all, so a difference under
   about 5 % on one boot is not a result.
-- [11 — Open issues](11-open-issues.md) §1, before you quote a number. **Thirty-seven** claims of
+- [11 — Open issues](11-open-issues.md) §1, before you quote a number. **Thirty-eight** claims of
   ours did not survive contact with their own raw data, and they are kept in place with what replaced
   them. §1's opening paragraph says exactly what that number counts.
 - [HELP-WANTED.md](../HELP-WANTED.md), if you would like to close one of the gaps. It is ranked, it

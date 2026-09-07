@@ -819,6 +819,31 @@ difference is 2,128,571 − 1,817,857 = **+310,714** tokens; adding it to the bo
 
 ---
 
+## 5b. The vision tower at two ranks — divisible, and still not free `[not tested]`
+
+Two ranks is the easy case for *splitting* the tower and it changes nothing about *loading* it.
+
+**Divisibility is clean.** Heads 16/2 = 8, `attn.proj` 512 = 4 × 128, the MLP 2048 = 16 × 128, the
+merger 2048 = 16 × 128 and its context 5120 = 40 × 128. No padding, and
+**`--mm-encoder-tp-mode data` is not needed** — that flag is TP=3's own, because at three ranks
+nothing in the tower divides at all ([18](18-vision-at-three-ranks.md) §1.1).
+
+**What you still need depends on the checkpoint, not the rank count.**
+
+| Checkpoint | What it takes |
+|---|---|
+| `brandonmusic/GLM-5.3-Flash-tr3-4bpw` (routed experts only) — the tower is dense BF16 | `LANGUAGE_MODEL_ONLY=0` and the per-request limits, plus VS4/VS6/VS7 for video. Nothing else |
+| `turboderp/GLM-5.3-Flash-exl3` at 4.05 bpw (full scope) — **the recommended two-node candidate**, §5 | The **same** VS1/VS2/VS3 and the same `CUDA_EXL3_PACKED_MAPPING` as at three ranks: the tower is 6-bit EXL3 and vLLM builds it with `quant_config=None` regardless of how many ranks you have |
+
+**And the video half is needed at any rank count**, because the frame-sampler mismatch it fixes is
+upstream's and has nothing to do with sharding ([18](18-vision-at-three-ranks.md) §4;
+[vllm#55644](https://github.com/vllm-project/vllm/issues/55644)).
+
+Neither row has been run. Both are readings of code against measured checkpoint facts `[not tested]`.
+If you run one, [HELP-WANTED](../HELP-WANTED.md) says what we would want reported.
+
+---
+
 ## 6. What is still **not** measured at two ranks
 
 This list is much shorter than it was, and every row now carries a reason rather than an omission.

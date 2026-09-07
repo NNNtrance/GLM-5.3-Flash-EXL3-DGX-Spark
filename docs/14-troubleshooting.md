@@ -199,9 +199,9 @@ DFlash draft: 5 KV layers kept in 1 independent cache group(s)
 
 **This is also what later capped the KV pool** — see §5.1.
 
-### 2.7 The vision tower ignores `--language-model-only` **[SILENT at TP=2]**
+### 2.7 The vision tower asserts at TP=3, and `--language-model-only` does not stop it being built
 
-**Track:** both — this entry documents both: a silent 1.05 GiB at TP=2, an assert at TP=3.
+**Track:** both — an assert at TP=3, a built-but-unused tower at TP=2.
 
 ```
 AssertionError: 16 is not divisible by 3
@@ -211,17 +211,137 @@ in `Glm5NextVisionAttention.__init__`.
 
 **Cause.** The model file builds the vision transformer **unconditionally**. `--language-model-only`
 only makes the multimodal limit return 0 — no image can be *submitted*; the tower is still *built*.
-At TP=2, `divide(16, 2)` succeeds and the only cost is **1.05 GiB of unused BF16 vision weights per
-rank, for the life of the stack, silently.** At TP=3 it asserts.
+At TP=2, `divide(16, 2)` succeeds and the boot continues. At TP=3 it asserts and the engine never
+starts.
 
-**Fix.** Three anchors in `patch-vllm-tp3.py`. Confirmation:
+**Two fixes, and which one you want depends on what you are serving.**
+
+- **You want images and video:** turn the tower on properly —
+  [`tracks/tp3/patches/vision/`](../tracks/tp3/patches/vision/README.md) and
+  [18](18-vision-at-three-ranks.md). That is the production recipe since 7 September 2026. The assert
+  itself is cleared by `--mm-encoder-tp-mode data`, but that flag **on its own is not enough**: see
+  §2.7a below, which is the failure you get next.
+- **You want text only:** three anchors in `patch-vllm-tp3.py` build no tower at all. Confirmation:
 
 ```
 HAREM-TP3: --language-model-only is set, so the GLM-5.3 vision tower is not built and its checkpoint tensors are skipped.
 ```
 
-Padding the tower's heads is the wrong fix; `--mm-encoder-tp-mode data` clears the assert and keeps
-carrying the 1.05 GiB.
+**`[retracted]` — this entry used to say the TP=2 cost is "1.05 GiB of unused BF16 vision weights per
+rank, silently".** That figure belongs to the routed-experts-only checkpoint; on the full-scope
+checkpoint the tower is 6-bit EXL3 at 0.416 GiB per rank, and on image `exl3-zeus:754421f` the flag
+may well cost nothing at all, because the meta-device path leaves the tensors unmaterialised
+`[not tested]`. [11](11-open-issues.md) §1.14.
+
+### 2.7a `There is no module or parameter named visual.blocks.N.attn.proj.weight` **[after clearing the assert]**
+
+**Track:** both — it is a property of the **checkpoint**, not of the rank count.
+
+You set `--mm-encoder-tp-mode data`, the assert is gone, and the load dies looking for dense weights.
+
+**Cause.** vLLM builds the tower with `quant_config=None` unconditionally
+(`models/glm5next/nvidia/model.py`), with a comment that is correct for the zai-org **fp8** checkpoint
+it was written against. In `turboderp/GLM-5.3-Flash-exl3` at 4.05 bpw the tower is **6-bit EXL3** —
+`proj`, `mlp.*` and `merger.*` have no dense `.weight` on disk at all. Built dense, it asks for
+tensors that do not exist.
+
+**A second, quieter half.** With `HAREM_EXL3_FULLSCOPE=1` the full-scope patch replaces the class's
+whole `packed_modules_mapping`, which is where the inherited `qkv_proj -> q/k/v_proj` entry lived.
+Without it **24 of the 99 vision linears do not resolve and fall back to BF16 silently** —
+`Exl3Config.get_quant_method` fails *open*, so this loads clean and answers wrong.
+
+**Fix.** VS1 and VS2 of [`patches/vision/patch-vision-tp3.py`](../tracks/tp3/patches/vision/patch-vision-tp3.py)
+for the first half; `CUDA_EXL3_PACKED_MAPPING={"qkv_proj":["q_proj","k_proj","v_proj"]}` — no patch,
+merged **under** the class mapping so it can only add — for the second. Prove both model-free before
+you boot, with `check-vision-mapping.py`. [18](18-vision-at-three-ranks.md) §3.
+
+### 2.7b `Attempted to assign N = N multimodal tokens to M placeholders` **[KILLS THE ENGINE CORE]**
+
+**Track:** both, and it is **upstream** — not ours, not EXL3's, not TP=3's.
+
+```
+File ".../vllm/v1/worker/gpu/mm/encoder_runner.py", line 285, in get_inputs_embeds
+File ".../vllm/model_executor/models/interfaces.py", line 450, in embed_input_ids
+File ".../vllm/model_executor/models/utils.py", line 657, in _merge_multimodal_embeddings
+RuntimeError: shape mismatch: value tensor of shape [1656, 4096] cannot be broadcast to
+              indexing result of shape [1728, 4096]
+ValueError: Attempted to assign 1656 = 1656 multimodal tokens to 1728 placeholders
+```
+
+The worker dies, the engine core dies, every later request gets `EngineDeadError` and HTTP 500. All
+ranks, same second. **The first video request does this.** Images are unaffected, which is exactly
+why an all-green image gate proves nothing about video.
+
+**Cause.** A video goes through **two independent frame samplers**: the pixels through
+GLM-5-Next's (`target_fps = 2.0`, `extract_t = int(duration × fps)`), the prompt placeholders through
+GLM-4.6V's (`target_fps = 3`, `extract_t = int(duration × fps × temporal_patch)`), because
+`Glm5NextProcessingInfo` overrides four methods and not `_get_video_second_idx_glm46v`. A
+four-second clip gives a grid of 4 and **12** timestamps: 4,968 placeholders for 1,656 encoder rows.
+
+**Do not read the numbers in the trace as totals.** Under chunked prefill at
+`--max-num-batched-tokens 2048` they are chunk-local counts (1,728 and 1,768 are pieces of 4,968).
+Reading 1,728 as `4 × 36 × 48 / 4` and concluding the width rounded 46 → 48 is wrong: both sides read
+`H` and `W` from the *same* grid tensor.
+
+**Not the cause, and both were suspected first:** the `max_pixels` brake (it never reaches the video
+processor at all) and the data-parallel encoder (it splits per item, and the encoder produced exactly
+the right number of rows).
+
+**It is not only short clips, and the ratio is not a constant.** The mismatch
+`len(timestamps) / grid_t` tracks the clip's duration through GLM-4.6V's `DYNAMIC_FPS_THRES`:
+**3.0 below 30 s**, **1.0 between 30 and 300 s** — the only band where the two samplers happen to
+agree — and **0.5 or lower above 300 s**, where there are now *fewer* placeholders than encoder rows.
+Both directions are fatal. A stack that has only ever been tested with a two-minute clip will look
+fine and die on the first short one.
+
+**Fix.** VS4 in [`patches/vision/`](../tracks/tp3/patches/vision/README.md) derives the timestamps
+from the pixel path's own sampler, which makes the equality structural. VS6 makes any future mismatch
+an HTTP 400 in the frontend instead of three dead ranks. And run `check-video-geometry.py` in the
+prelude: model-free, under a second, and it refuses the boot. [18](18-vision-at-three-ranks.md) §4.
+
+**Upstream:** filed as [vllm#55644](https://github.com/vllm-project/vllm/issues/55644) with the fix
+and a unit test in [vllm#55647](https://github.com/vllm-project/vllm/pull/55647).
+
+### 2.7c `At most 1 video(s) may be provided in one prompt` when you asked for 2 **[SILENT until you try]**
+
+**Track:** both.
+
+The boot log prints `'limit_mm_per_prompt': {'image': 4, 'video': 2}` and the limit is **1**.
+`Glm4vProcessingInfo.get_supported_mm_limits` declares `{"image": None, "video": 1}` and
+`multimodal/processing/context.py` takes `min(user_limit, supported_limit)`. The 1 is a conservative
+default, not a real limit: videos are processed one at a time and the placeholder and mrope paths are
+both per item. **Fix:** VS7, `HAREM_VISION_VIDEO_LIMIT` (default 2).
+
+Related, and survivable: a clip shorter than about **0.5 s** makes `extract_t = int(duration × 2.0)`
+collapse to 0, the sampler return an empty list, and the frontend raise `IndexError` — HTTP 400 with
+the engine alive.
+
+### 2.7d A patch anchor matched zero times and the rank stopped with exit 21 — while the model-free gate said PASS
+
+**Track:** both, and the lesson is general: it is about **gate design**, not about vision.
+
+A patch script that fails closed did exactly what it should — an anchor matched zero times, the
+script refused, and all three ranks stopped with exit 21 before a byte of weight was read. The
+confusing part was that the model-free gate had passed the same patch minutes earlier.
+
+**Cause.** The gate ran `patch-fullscope-tp3.py` and then the vision patch, and called that the
+chain. The **prelude** runs `patch-vllm-tp3.py` long before either, and one of its edits rewrites the
+first two lines of the very block the vision anchor was written against. The gate and the boot were
+patching different bytes.
+
+**Fix, and the rule.** [`verify-cpu.sh`](../tracks/tp3/patches/vision/verify-cpu.sh) now runs the
+**full prelude order**, with the same environment knobs and the same read-only overlay bind-mount as
+the launcher. *A gate that does not reproduce the boot is not a gate.* Two companions, both real:
+
+- **`set -eo pipefail` is not optional in a gate.** Every check in that script ends in `| tail -1`,
+  and without `pipefail` a run printing `[vision] FAIL` exits **0**. Add it, then confirm by watching
+  a failing gate actually fail — an untested gate is an assumption.
+- **Do not assert a count you derived from metadata.** "48 dead fused tensors must be dropped" was
+  true of the safetensors headers and false of the load, which delivers 0 or 1 because
+  `AutoWeightsLoader` filters unexpected `.bias` suffixes first. It killed a boot whose tower was
+  entirely correct. Report counts; assert invariants.
+
+[18](18-vision-at-three-ranks.md) §13.
 
 ### 2.8 The four hard asserts at TP=3
 
@@ -1545,7 +1665,9 @@ one.**
 | 9 | DFlash2 on the V1 model runner | boots, correct-looking text, quietly loses acceptance | 9.5 |
 | 10 | The swallowed `flashinfer.comm` preload | an illegal address later, on a different rank, at a random-looking time | 7.6 |
 | 11 | The EP evidence line discarded by the logger | the raises worked, the evidence line and a safety-net **warning** did not | 8.6 |
-| 12 | The vision tower at TP=2 | 1.05 GiB of unused weights on every rank, for the life of the stack | 2.7 |
+| 12 | The vision tower at TP=2 | built and unused for the life of the stack — the "1.05 GiB" this row used to quote is withdrawn, [11](11-open-issues.md) §1.14 | 2.7 |
+| 12a | The packed-mapping entry the full-scope patch shadows | 24 of 99 vision linears fall back to BF16 **silently** — `get_quant_method` fails open, so the tower loads clean and answers wrong | 2.7a |
+| 12b | An anchor written against the stock file | the model-free gate says PASS and the boot stops at exit 21, because the gate did not reproduce the prelude's patch **order** | 2.7d |
 | 13 | Long prompts never scheduled | no error, no timeout — `Running: 0, Waiting: 1` forever | 5.4 |
 | 14 | Two launcher copies | both run, both produce a server, one silently lacks three features | 8.7 |
 | 15 | The EXL3 pad invariant holding by accident | correct, unchecked, one arithmetic change from silently wrong | 9.3 |

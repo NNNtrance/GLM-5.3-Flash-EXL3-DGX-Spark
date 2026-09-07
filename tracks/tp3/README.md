@@ -3,7 +3,7 @@
 **This is the production track.** It is what our three nodes serve, start at boot, and were rebooted
 into as a whole cluster with the quality gates read afterwards.
 
-The recipe itself is the [README quick start](../../README.md) — eleven steps, each ending in a
+The recipe itself is the [README quick start](../../README.md) — eleven steps and one optional, each ending in a
 check. This page is the directory: what is in it, what stays outside it, and the numbers this
 arrangement produces.
 
@@ -15,10 +15,11 @@ Two nodes instead of three: [tracks/tp2](../tp2/) and [docs/15](../../docs/15-tp
 
 | File | What it is |
 |---|---|
-| [`env.tp3-full.example`](env.tp3-full.example) | **The production template — configuration 12.** Full-scope checkpoint, `gpu-memory-utilization` **0.88**, the sparse-indexer workspace bound (`HAREM_INDEXER_WS_MODE=bound`), the sm_12x correctness set (`HAREM_SM12_ITEMS=pdl,kpool`), fp8 KV and fp8 draft cache, `HAREM_SW_BLOCK_SIZE=256`, `NCCL_MAX_NCHANNELS=8`. Every variable carries a one-line reason and the ones with a real cost carry the measurement that decided them |
+| [`env.tp3-full.example`](env.tp3-full.example) | **The production template — configuration 13.** Configuration 12 plus the vision tower: `LANGUAGE_MODEL_ONLY=0`, `HAREM_VISION=1`, `CUDA_EXL3_PACKED_MAPPING`, and four `--mm-*` arguments. The text-only fallback is the same file with those six lines reversed, and it is documented in place. Everything below is unchanged from configuration 12: Full-scope checkpoint, `gpu-memory-utilization` **0.88**, the sparse-indexer workspace bound (`HAREM_INDEXER_WS_MODE=bound`), the sm_12x correctness set (`HAREM_SM12_ITEMS=pdl,kpool`), fp8 KV and fp8 draft cache, `HAREM_SW_BLOCK_SIZE=256`, `NCCL_MAX_NCHANNELS=8`. Every variable carries a one-line reason and the ones with a real cost carry the measurement that decided them |
 | [`env.tp3.example`](env.tp3.example) | The routed-experts-only template — production configurations 1 to 8, and the rollback |
 | [`patches/`](patches/) | The in-container patch tree for the full-scope checkpoint: the ten-anchor loader patch, the image gate, the sidecar generator, the sm_12x correctness set, the prelude. [`patches/README.md`](patches/README.md) is the inventory |
 | [`patches-optional/sm12/`](patches-optional/sm12/) | **Not part of the recipe** — one file. The sm_12x correctness set moved out of here into `patches/` with production 11; what is left is item 4, whose effect could not be measured from the client in either direction. The sidecar warning that copying anything into the production tree costs a dump boot lives here too |
+| [`patches/vision/`](patches/vision/README.md) | **In the recipe since production configuration 13 (7 September 2026).** Six anchors and three model-free gates that turn the vision tower back on: **4 images + 2 videos per request**, with the KV pool inside configuration 12's own boot-to-boot spread, C1 +0.1 %, C8 +1.5 %, ten gates out of ten and a whole-cluster reboot at 318 s against 311 s. It cost one 590 s-class dump boot and a fresh ~53 GB-per-node sidecar, because the tower adds 596 tensor names to the identity ([docs/18](../../docs/18-vision-at-three-ranks.md)) |
 | [`patches/indexer-workspace/`](patches/indexer-workspace/) | **In the recipe since production configuration 12 (6 September 2026).** One patch that bounds the sparse indexer's K-gather workspace from 4.92 GiB to 512 MB: **KV pool +10.25 %** at the same memory fraction, gates full, stress clean, no measured speed cost. It cost one 590 s dump boot and a fresh ~53 GB-per-node sidecar ([`results/memory/indexer-workspace-ab.md`](../../results/memory/indexer-workspace-ab.md)) |
 | [`harem-exl3.service`](harem-exl3.service) | The autostart unit, installed and `enabled` on all three of our nodes |
 | [`motor-onkosul-exl3.sh`](motor-onkosul-exl3.sh) | Its preflight: seven checks, at most ten minutes of waiting |
@@ -89,7 +90,7 @@ configuration-by-configuration progression is
 
 ## What is TP=3's own, and why
 
-Three things in this repository exist only because three ranks is not two:
+Four things in this repository exist only because three ranks is not two:
 
 1. **The padding.** Five shapes in GLM-5.3-Flash do not divide by three, and an EXL3 trellis cannot
    be zero-extended, so the shapes are padded to whole 128-column Hadamard blocks: heads 64 → 66,
@@ -101,6 +102,11 @@ Three things in this repository exist only because three ranks is not two:
 3. **The padded-load path**, which is what puts a *fully quantized* checkpoint into dimensions vLLM
    has padded. It needs `cuda-exl3` at `754421f` or later plus our A9 and A10 patches, and both are
    provable no-ops at TP≤2 ([docs/13](../../docs/13-full-scope-checkpoint.md) §7).
+4. **The replicated vision encoder.** Nothing in the tower divides by three — not the 16 heads, not
+   the 4096 MLP, not the merger's 4096 and 10240 — so it is `--mm-encoder-tp-mode data` rather than
+   the padding this stack uses everywhere else. **At two ranks that flag is not needed**; the rest of
+   [`patches/vision/`](patches/vision/README.md) is a property of the checkpoint and of upstream, not
+   of the rank count ([docs/18](../../docs/18-vision-at-three-ranks.md) §11).
 
 Everything else on this stack — the image, the kernels, the fabric work, the KV pool surgery, the
 fast boot, the measurement protocol — belongs to both tracks.

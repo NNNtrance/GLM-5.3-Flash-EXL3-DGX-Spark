@@ -42,7 +42,7 @@ your track's example rather than the whole file.
 welcome as a measurement, and a silent failure — no log line at all — is worth more to us than a
 loud one; §11 of [docs/14](docs/14-troubleshooting.md) is the index of the twenty we hit that
 produced no error message. And **a pull request that withdraws one of our numbers is worth more than
-one that adds a number**: thirty-seven claims of ours did not survive their own raw data, they are
+one that adds a number**: thirty-eight claims of ours did not survive their own raw data, they are
 kept in place with what replaced them ([docs/11](docs/11-open-issues.md) §1, whose opening paragraph
 says what that number counts), and we do not ask for a replacement figure as the price of a
 correction.

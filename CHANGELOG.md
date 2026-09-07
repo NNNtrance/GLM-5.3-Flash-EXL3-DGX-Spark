@@ -11,6 +11,95 @@ rounds, which is what the persisted MLA tuner cache bought — see
 
 ---
 
+## 2026-09-07 — Vision at three ranks: the tower comes back, the video sampler bug, and 4 images + 2 videos per request
+
+**Production configuration 13.** Configuration 12 with the vision tower **on**. Six environment lines
+and six patch anchors; nothing else moves — same image, same checkpoint, same memory fraction, same
+batching, same sampling. New page: [docs/18](docs/18-vision-at-three-ranks.md). New patch tree:
+[`tracks/tp3/patches/vision/`](tracks/tp3/patches/vision/README.md). Gate results:
+[`results/gates/vision-gates-tp3.md`](results/gates/vision-gates-tp3.md).
+
+**This repository said this was impossible, and the claim is withdrawn.** docs/03 §3, docs/14 §2.7,
+the README quick start, docs/00 and the TP=3 environment template all said the tower cannot be served
+at TP=3, and the recipe shipped a patch whose purpose was to stop it being built. Three things were
+wrong: the replication flag that clears the assert was named and dismissed in the same sentence; the
+"1.05 GiB of BF16 vision weights per rank" belonged to the routed-experts-only checkpoint and was
+carried across a checkpoint change without being re-derived (on the production checkpoint the tower is
+**6-bit EXL3, 0.557 GiB total, 0.416 GiB per rank**, readable from the safetensors headers in
+seconds); and the real obstacle — vLLM builds the tower with `quant_config=None` while this
+checkpoint's tower is quantized — was never in the sentence at all. **The retraction count moves from
+thirty-seven to thirty-eight**, [docs/11](docs/11-open-issues.md) §1.14, and every place that quotes
+it is updated. docs/03 §3 becomes `[history]` with a pointer; docs/14 §2.7 keeps the text-only path
+and carries the correction beside it.
+
+**What it cost, measured against a same-session configuration 12 reference.** KV pool **7,143,250 ·
+7,033,057 · 7,016,528** across three boots, all inside configuration 12's own 7,024,793–7,126,721
+boot-to-boot spread — the tower has no measurable pool cost. C1 **70.0 (+0.1 %)**, C8 **198.8
+(+1.5 %)**, both inside band; TTFT and DFlash2 acceptance (60.4–63.9 % against ~62 %) unchanged;
+peak activation equal. Fast-load boot **247 s** by hand and **244 s** under the unit against ~251 s;
+whole-cluster reboot **318 s** against 311 s. **Ten gates out of ten**, text gates 10/10 and 12/12 on
+every boot. The memory fraction stays at **0.88** — a 0.87 rung was prepared and never run, because
+the worst-case stress found no harm to pay for.
+
+**What it cost that is not in that table.** One extra 53 GB-per-node sidecar dump boot (454 s): the
+tower adds **596 tensor names and 0.42 GiB** to the sidecar, 5,858 → **6,454**, and the identity check
+is exact name-set equality, so the text-only sidecar is *refused* by a tower-carrying engine — the
+correct behaviour, and the reason a new `FASTLOAD_DIR` was mandatory rather than tidy. About
+**1.2–1.4 GiB** more resident host memory on the rank that serves the API, and the multimodal
+processor cache had to be turned off (`--mm-processor-cache-gb 0`, default **4 GiB of host memory**)
+to bring idle MemAvailable there from 1.10 to 3.42 GiB. Under the worst case built for it — a
+1M-token request, a C8 round, and a 4-image + 2-video request sent *while* the C8 round ran — that
+node pages out 282 MiB once and then nothing, MemAvailable never falls below 1.47 GiB, and nothing
+errors or slows outside its band. The concurrent window costs the text arm **−12.7 %**; that is
+contention at `--max-num-seqs 8` and **how much of it is multimodal was not attributed**
+`[not tested]`.
+
+**And the thing that actually cost the three engine windows was not ours.** vLLM's GLM-5-Next port
+runs a video through **two independent frame samplers** — pixels through GLM-5-Next's, prompt
+placeholders through GLM-4.6V's — because `Glm5NextProcessingInfo` overrides four methods and not
+`_get_video_second_idx_glm46v`. A four-second clip produced 4,968 placeholders for 1,656 encoder rows
+and killed the engine core on all three ranks with `Attempted to assign 1656 = 1656 multimodal tokens
+to 1728 placeholders`. It has nothing to do with three ranks, EXL3 or expert parallelism: it kills
+**every** GLM-5-Next video request. And the ratio is not a constant — it tracks the clip's duration
+(**3.0 below 30 s, 1.0 between 30 and 300 s, 0.5 and lower above 300 s**), so the one band that works
+is a coincidence and long clips fail in the other direction. Filed as
+[vllm#55644](https://github.com/vllm-project/vllm/issues/55644) with the fix and a unit test in
+[vllm#55647](https://github.com/vllm-project/vllm/pull/55647), DCO-signed and awaiting a maintainer's
+ready label.
+
+**Two published readings of that crash were wrong and are withdrawn.** "The width rounded 46 → 48"
+— 1,728 and 1,768 are chunk-local placeholder counts under chunked prefill, not totals, and both
+sides read `H` and `W` from the same grid tensor. "The `max_pixels` brake is the first suspect" — it
+never reaches the video processor at all; the key that does is **`max_image_tokens`**, measured on a
+1080p clip at 10,764 → 7,788 vision tokens with images bit-identical. `max_pixels` stays in the line
+because dropping it takes vLLM's own per-item budget from 10,242 to 32,242 tokens.
+
+**Four gate lessons, all of them about our own tooling.** An anchor written against the stock file
+matched zero times at boot while the model-free gate said PASS, because the gate chained two patches
+instead of reproducing the prelude's order — *a gate that does not reproduce the boot is not a gate*,
+and `verify-cpu.sh` now runs the full order. The same gate returned 0 through a `| tail -1` pipe for
+want of `pipefail`. A count derived from safetensors headers (48 dead fused tensors) was asserted as
+an invariant and killed a boot whose tower was entirely correct; counts are reported, invariants are
+asserted. And the expensive one: the install-day gates checked only **weight loading**, so a tower
+that loaded perfectly still died on the first video — `check-video-geometry.py` now checks
+**geometry**, model-free, in under a second. New failure signatures in
+[docs/14](docs/14-troubleshooting.md) §2.7a–§2.7d.
+
+**One boot-log line is absent by design, and was not patched back.** `HAREM-VISION: tower loaded`
+lives inside the tower's `load_weights`, which the fast-load path skips. Editing the patch to restore
+it would have invalidated the sidecar just written **and** shipped a different tree from the one the
+gates passed. The substitute chain runs on every boot — the restored-tensor count (6,454 against
+5,858), the FLASH_ATTN encoder line, `mm_encoder_tp_mode: 'data'`, and the fail-closed name-set
+equality that a BF16-fallback tower could not have satisfied — and the rewritten gate was
+counter-tested against five corrupted-log scenarios, all five of which failed it.
+
+**Still open**, [docs/11](docs/11-open-issues.md) §2.31: the upstream PR is waiting on a maintainer;
+the brake ladder has one rung (`max_image_tokens` 8,000, and nothing at that ceiling has been served
+— every fixture is four seconds long); **image quality is unbenchmarked** — no MMMU, no DocVQA, no
+comparison against a BF16 tower; the audit line above; and the unattributed −12.7 %.
+
+---
+
 ## 2026-09-07 — Consistency pass, part 2: the systemd page, the tree naming, the charts, and the retraction count
 
 **Documentation only. No measurement was re-run and no claim was rewritten — one published figure was

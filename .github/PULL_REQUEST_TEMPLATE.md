@@ -69,7 +69,7 @@ it before anything else.
 ## 6. Retractions are welcome
 
 **A pull request that withdraws a number is worth more here than one that adds a number, and it will
-be merged with thanks.** This repository has published and then withdrawn thirty-seven of its own
+be merged with thanks.** This repository has published and then withdrawn thirty-eight of its own
 claims; they are kept, in place, with what replaced them (`docs/11-open-issues.md` §1 says what that
 number counts). If you measured something of ours properly
 and it does not hold, open the pull request. Say what you ran, what you got, and which claim it

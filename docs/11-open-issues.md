@@ -10,11 +10,11 @@ elsewhere.
 
 ## 1. Retracted
 
-**Thirty-seven retractions.** That is the number this repository quotes everywhere, and this is what
-it counts: the **32 rows** of the audit table in §1.9, plus the **five** withdrawn findings of §1 that
-are not rows of that table — §1.5, the first bullet of §1.8, §1.11, §1.12 and §1.13. A retracted
-*correction* is a retraction in its own right, which is why §1.12 and §1.13 are counted rather than
-folded into the rows they correct. The other numbered subsections are the long-form accounts of rows
+**Thirty-eight retractions.** That is the number this repository quotes everywhere, and this is what
+it counts: the **32 rows** of the audit table in §1.9, plus the **six** withdrawn findings of §1 that
+are not rows of that table — §1.5, the first bullet of §1.8, §1.11, §1.12, §1.13 and §1.14. A
+retracted *correction* is a retraction in its own right, which is why §1.12, §1.13 and §1.14 are
+counted rather than folded into the rows they correct. The other numbered subsections are the long-form accounts of rows
 that are already in the table and are not counted twice.
 
 Seven things we wrote down as findings and later measured properly, plus two smaller ones, plus the
@@ -25,7 +25,9 @@ reason that was right about the fact and wrong about the cause (§1.12), plus a 
 published upstream and someone else corrected (§1.13). Each was published — in a report, an upstream
 issue, or both — before it was corrected. Two of them (§1.6 and §1.7) are the same number, corrected
 twice, in opposite directions. **§1.13 is the first that a reader outside this stack caught**, and it
-is the one we would least have found alone.
+is the one we would least have found alone. **§1.14 is the largest in scope**: it withdraws a
+capability claim rather than a number, and it stood for two days because nobody tested it against the
+checkpoint this stack actually serves.
 
 ### 1.1 "The missing `n_rows` also costs the non-expert-parallel path"
 
@@ -197,7 +199,7 @@ the mistakes is visible in one place `[retracted]`.
 | 19 | `NCCL_MAX_NCHANNELS=8` had already been tried and eliminated | That arm set 8 channels **together with** `NCCL_PROTO=LL` and was never written up. Tried cleanly it is +13 % at C8 | [06](06-nccl-mesh.md) §8 |
 | 20 | The extra masking pass is under 1 % of the MoE layer | 2.9 % at M=8 rising to 15.8 % at M=2048 | §1.2 |
 | 21 | The missing `n_rows` also costs the non-expert-parallel path | With no expert map the tail is `-1` everywhere; the author's reading was right | §1.1 |
-| 22 | `--language-model-only` stops the vision tower being built | It only stops it being *run*. 1.05 GiB wasted at TP=2, and only visible at TP=3 when `divide(16, 3)` asserted | [03](03-tp3-padding-and-sidecars.md) |
+| 22 | `--language-model-only` stops the vision tower being built | It only stops it being *run*, and at TP=3 `divide(16, 3)` asserts before the flag can matter. **The "1.05 GiB wasted at TP=2" half of this row is itself withdrawn — §1.14** | [03](03-tp3-padding-and-sidecars.md), §1.14 |
 | 23 | The TP=2 KV collapse came from the draft's page layout | The dominant cause was memory scarcity at two nodes; the page layout was second-order | [07](07-kv-and-draft-page.md) §4 |
 | 24 | Overlapping the collective with compute is worth −10…13 % of prefill and −6…10 % of decode | That estimate counted the hideable collective and not the second MoE weight stream the split pays for. Corrected: prefill −6.3…+8.0 %, decode +6…+38 % (worse) | §2.17 |
 | 25 | 8.2 GiB per worker is stranded, and equalising the ranks would grow the pool 8–26 % | Not an allocation. vLLM's "non-torch memory" is a delta between two `MemAvailable` readings, and the last node started is the one the kernel has had least time to reclaim for. Acting on it would have over-committed the head by ~8 GiB | §2.3 |
@@ -284,6 +286,46 @@ ours, not upstream's** — the startup refusal below the one-request floor. Corr
 carries the reachability arithmetic, in §2.28 below, in
 [HELP-WANTED](../HELP-WANTED.md) §9 and in the patch docstring. The thread is answered.
 Retracted 6 September 2026.
+
+### 1.14 "The vision tower cannot run at three ranks, and it wastes 1.05 GiB at two"
+
+Until 7 September 2026 this repository said, in [03](03-tp3-padding-and-sidecars.md) §3,
+[14](14-troubleshooting.md) §2.7, the README quick start, `docs/00` and the TP=3 environment
+template, that the GLM-5.3-Flash vision tower cannot be served at TP=3 — and shipped a patch whose
+purpose was to stop it being built. **The whole claim is withdrawn** `[retracted]`, and it was
+withdrawn by running it: production configuration 13 serves 4 images and 2 videos per request at
+three ranks, with the text gates unmoved, C1 +0.1 %, C8 +1.5 %, and a KV pool inside configuration
+12's own boot-to-boot spread ([18](18-vision-at-three-ranks.md)).
+
+Three separate things were wrong, and the shape of the error is worth more than any of them.
+
+- **"It cannot be split three ways, so it cannot run."** True of splitting and false of running. The
+  flag that replicates the encoder instead — `--mm-encoder-tp-mode data` — exists in this vLLM
+  revision and the model declares `supports_encoder_tp_data = True`. It was named in §3 of that page
+  and dismissed in the same sentence, on the strength of the second error below.
+- **"1.05 GiB of BF16 vision weights on every rank at TP=2."** That is the **routed-experts-only**
+  checkpoint, which configurations 1–8 served. On the full-scope checkpoint this stack has served
+  since configuration 9 the tower is **6-bit EXL3: 172 modules, 1,007 tensors, 0.557 GiB in total and
+  0.416 GiB per replicated rank** — measured from the safetensors headers on a CPU in seconds, at any
+  time in the preceding two days. The number was carried forward across a checkpoint change without
+  being re-derived.
+- **"`--mm-encoder-tp-mode data` would clear the assert but keep carrying the 1.05 GiB."** Wrong in
+  both halves: the figure is 0.416 GiB, and the flag on its own does not make the tower **load** at
+  all, because vLLM builds it with `quant_config=None` while this checkpoint's tower is quantized.
+  That was the real obstacle and it was never in the sentence.
+
+A fourth, smaller and in the other direction: on image `exl3-zeus:754421f` the flag may cost nothing
+even on the checkpoint the figure came from, because `_mark_tower_model` enters `no_init_weights` and
+the tensors stay on the meta device. That is a reading of the source, not a boot-log measurement
+`[not tested]`.
+
+**What the failure was.** Not a mismeasurement — the tower's weight was never measured on the
+checkpoint the claim was about. A capability was declared impossible from an assert message, a memory
+figure was inherited from a checkpoint we had stopped serving, and the one flag that would have
+falsified both was named and waved past. The counter-discipline this stack already has —
+*model-free first, and a number is only a plan input if two independent sources agree* — would have
+caught it from the safetensors headers alone, with no GPU and no engine window. Retracted and
+replaced by [18](18-vision-at-three-ranks.md), 7 September 2026.
 
 ## 2. Open, with a known next step
 
@@ -1526,6 +1568,49 @@ see whether the first call succeeded. It is efficient and usually right, and it 
 second call must not happen if the first one failed, or wherever a framework grades on turn ordering.
 Constrain it in the system prompt or send `parallel_tool_calls: false`; that setting has never been
 measured here `[not tested]`.
+
+### 2.31 The vision tower is in production, and five things about it are not settled
+
+The tower ships ([18](18-vision-at-three-ranks.md), production configuration 13, 7 September 2026):
+4 images and 2 videos per request, ten gates out of ten, no measurable cost on any speed or pool
+axis. What is *not* closed, in the order we would take it:
+
+1. **The upstream video sampler fix is filed and waiting on a maintainer.**
+   [vllm#55644](https://github.com/vllm-project/vllm/issues/55644) is the issue,
+   [vllm#55647](https://github.com/vllm-project/vllm/pull/55647) the fix plus a unit test, DCO-signed
+   and **awaiting a ready label**. It is not ours and not conditional on anything here:
+   `Glm5NextProcessingInfo` does not override `_get_video_second_idx_glm46v`, so the placeholder count
+   comes from GLM-4.6V's frame sampler while the pixels come from GLM-5-Next's, and the mismatch kills
+   the engine core on the **first video request** at any parallel size. The ratio moves with the
+   clip's duration — **3.0 below 30 s, 1.0 between 30 and 300 s, 0.5 and lower above 300 s** — so the
+   only band that works is a coincidence and long clips are fatal too. Two smaller items ride along in
+   the issue: the `min(user, supported)` clamp that makes `--limit-mm-per-prompt {"video": 2}`
+   silently mean 1, and the sampler that returns zero frames for a clip under half a second.
+   **Next step: nothing on our side until it moves.** [18](18-vision-at-three-ranks.md) §12.
+2. **The brake ladder has one rung.** `max_image_tokens` is at 8,000 tokens per item, chosen because
+   the tower runs a video in one forward and the unbraked ceiling is ~14.6 GiB of SwiGLU buffer
+   `[estimate]`. 16,000 would put the peak at 0.98 GiB and is the obvious next rung, with K4/K4b/K5/K7
+   repeated at each. Not run `[not tested]`. Nothing at the current ceiling has been served either:
+   every fixture is four seconds long.
+3. **Image quality is unbenchmarked.** The gates prove the tower loads correctly and answers
+   correctly on synthetic fixtures — a colour, a shape, a direction, a word. No MMMU, no DocVQA, no
+   ChartQA, and no comparison of this 6-bit EXL3 tower against a BF16 one `[not tested]`. This is the
+   largest gap on the page and it is a benchmark-time problem, not a design one.
+4. **The tower audit line does not print on a fast-load boot.** VS3's audit lives inside
+   `load_weights`, which the sidecar path skips. The replacement evidence chain runs on every boot
+   and was counter-tested five ways ([18](18-vision-at-three-ranks.md) §8.1), but moving the audit
+   past `process_weights_after_loading` would restore the direct line. It costs a sidecar dump, which
+   is why it did not happen inside the promotion window `[not tested]`.
+5. **The concurrency price is measured and unattributed.** A 4-image + 2-video request sent while a
+   C8 round runs costs the text arm **−12.7 %** — contention at `--max-num-seqs 8`, where a ninth
+   request queues with a 5,991-token prefill. How much of that is *multimodal* rather than simply a
+   long ninth prefill was never separated, because the equivalent text request was not run
+   `[not tested]`.
+
+And one thing that is closed and worth stating as closed: **speculative decoding keeps working with
+images and video.** The drafter never sees pixels (`supports_mm_inputs = False`) and reaches the
+multimodal context only through the target's hidden states; acceptance measured 60.4–63.9 % against
+production 12's ~62 %. The code permitted this and nothing had demonstrated it.
 
 ---
 

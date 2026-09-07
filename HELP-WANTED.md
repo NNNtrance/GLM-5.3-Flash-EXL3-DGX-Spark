@@ -566,6 +566,6 @@ Repeated from `CONTRIBUTING.md` because it is the shortest way to save your afte
   before you push; we do, before every commit.
 
 **A pull request that withdraws one of our numbers is worth more here than one that adds a number.**
-We keep the mistake and add the retraction rather than deleting the mistake — thirty-seven of them
+We keep the mistake and add the retraction rather than deleting the mistake — thirty-eight of them
 are in `docs/11` §1, whose opening paragraph says what that number counts — and we do not ask for a
 replacement figure as the price of a correction.

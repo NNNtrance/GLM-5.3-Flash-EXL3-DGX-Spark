@@ -204,20 +204,24 @@ At TP=3, four places in the engine assert before anything useful happens:
 `patch-vllm-tp3.py` also carries the shared-expert pad and the vision-tower fix below. Each edit is a
 single exact-match anchor; the script fails closed if an anchor matches zero times or more than once.
 
-### The vision tower ignores `--language-model-only`
+### The vision tower ignores `--language-model-only` — `[history]` since 7 September 2026
 
-This one is fatal at TP=3 and was invisible at TP=2, which makes it a good example of why a
-two-node stack proves nothing about a three-node one.
+**This section is no longer the recipe.** Since 7 September the production configuration **builds
+and serves the tower**: 4 images and 2 videos per request, at TP=3, on the full-scope checkpoint,
+with the text side unchanged and no measurable KV-pool cost. The whole account — why the tower would
+not load even with the assert cleared, the upstream video sampler bug that killed the engine core on
+the first video request, the brake, the ten gates and the cost table — is
+[18](18-vision-at-three-ranks.md). The patch tree is
+[`tracks/tp3/patches/vision/`](../tracks/tp3/patches/vision/README.md).
+
+What follows is kept because the `--language-model-only` path is still the **text-only fallback**,
+and because two of its claims were wrong and the correction belongs beside them.
 
 The model file reads `multimodal_config` — it even reads `mm_encoder_tp_mode` — and then builds the
 vision transformer **unconditionally**. `--language-model-only` only makes the multimodal limit
-return 0, so no image can be *submitted*; it never stops the tower being *built*. Elsewhere in the
-same image the flag is honoured properly, so this is a missing check rather than a design choice
-`[measured-here]`.
-
-At TP=2 the omission was invisible: `divide(16, 2)` succeeds, and the only cost was that every rank
-built and loaded 347 unused tensors — **1.05 GiB of BF16 vision weights** — for the whole life of the
-TP=2 stack. At TP=3, `divide(16, 3)` asserts and the engine never starts.
+return 0, so no image can be *submitted*; it never stops the tower being *built*. At TP=2,
+`divide(16, 2)` succeeds and the engine starts anyway; at TP=3, `divide(16, 3)` asserts and it never
+does `[measured-here]`.
 
 The fix is three anchors: a builder that returns `None` when `language_model_only` is set and logs
 why; the construction site routed through it; and a `load_weights` override that skips the `visual.`
@@ -228,9 +232,26 @@ the boot log:
 HAREM-TP3: --language-model-only is set, so the GLM-5.3 vision tower is not built and its checkpoint tensors are skipped.
 ```
 
-Padding the tower's heads would have been the wrong fix — the tower is never executed, so the right
-answer is not to build it. `--mm-encoder-tp-mode data` would also clear the assert (the tower
-supports it) but would keep carrying the 1.05 GiB.
+**Two corrections `[retracted]`.**
+
+- *"Every rank built and loaded 347 unused tensors — 1.05 GiB of BF16 vision weights — for the whole
+  life of the TP=2 stack."* Wrong twice. That describes the **routed-experts-only** checkpoint, where
+  the tower really is dense BF16; on the production full-scope checkpoint the tower is **6-bit EXL3,
+  0.557 GiB in total and 0.416 GiB per rank** ([18](18-vision-at-three-ranks.md) §3.1). And on image
+  `exl3-zeus:754421f` the flag probably spends nothing at all: `_mark_tower_model` enters
+  `no_init_weights`, so the tensors stay on the meta device and `AutoWeightsLoader` skips the module
+  — a reading of the installed source, never confirmed from a boot log `[not tested]`. What the flag
+  costs at TP=2 is therefore **unmeasured and probably zero**, not 1.05 GiB.
+- *"`--mm-encoder-tp-mode data` would also clear the assert but would keep carrying the 1.05 GiB."*
+  Wrong in both halves. It clears the assert and it is what production 13 runs, at 0.416 GiB per
+  rank; and on its own it does **not** make the tower load at all, because the checkpoint's tower is
+  EXL3 while vLLM builds it with `quant_config=None`
+  ([18](18-vision-at-three-ranks.md) §3.1–§3.2).
+
+Padding the tower's heads is still the wrong fix, but for a different reason than "the tower is never
+executed": at three ranks **nothing** in the tower divides by three — not the 16 heads, not the 4096
+MLP, not the merger's 4096 and 10240 — so it is four padded shapes and a new pad audit to save
+0.28 GiB per rank ([18](18-vision-at-three-ranks.md) §2b).
 
 ---
 

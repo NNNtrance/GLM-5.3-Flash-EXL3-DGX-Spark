@@ -45,7 +45,7 @@ this stack, unchecked, before anyone designed it (§7.1).
 | Size on disk | **165.2 GB / 153.8 GiB** — 19 shards (~8.59 GB each), plus `mtp.safetensors` 3.79 GB, `quantization_config.json` 47.9 MB and a 16.0 MB index `[measured-here]` |
 | Verified | `sha256` 23/23 against the repository's own LFS metadata, independently on both nodes `[measured-here]` |
 | Format | exl3 v1.4.4, codebook `mul1`, `bits: 4.05`, `head_bits: 6`, `out_scales: always`, calibration 250 rows × 2,048 columns |
-| Architecture | `Glm5NextForConditionalGeneration` (a vision tower is present; `--language-model-only` keeps it out) |
+| Architecture | `Glm5NextForConditionalGeneration` — **the vision tower is present and is itself 6-bit EXL3**: 172 modules, 1,007 tensors, all in shard 19, 0.557 GiB, in `trellis`/`suh`/`svh`/`mul1` form, with **no dense `.weight`** for `proj`, `mlp.*` or `merger.*`. It is **not** listed in `quantization_config.json`'s `tensor_storage` and is recovered by `cuda_exl3`'s `_augment_from_checkpoint()` from the safetensors headers — the first wall anyone else loading this checkpoint with the tower on will hit. Served since 7 September 2026 ([18](18-vision-at-three-ranks.md)); `--language-model-only` is the text-only fallback |
 | Index | 148,046 tensors, of which **36,719 are `.trellis`**; `model.visual.*` (1,007) is quantized too; `mtp.safetensors` is **not** in the index, so vLLM never reads it |
 
 **It is not smaller, and that surprised us.** The expectation going in was 55–60 GB. The routed
