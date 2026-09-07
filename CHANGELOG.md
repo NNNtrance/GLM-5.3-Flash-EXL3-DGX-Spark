@@ -11,6 +11,62 @@ rounds, which is what the persisted MLA tuner cache bought — see
 
 ---
 
+## 2026-09-08 (later) — Both backports promoted, on two boots and a test written for the one thing that was left
+
+**The production configuration now carries `HAREM_PREFIX_HIT=1` and `HAREM_KPOOL_TAIL_FIX=1`.**
+`.env.tp3` is the both-knobs arm on all three nodes, the systemd unit is unchanged — it reads
+`ENV_FILE=$HOME/exl3-zeus/.env.tp3` and takes the tree, the overlay and the sidecar from it, so
+promotion is a file swap — and the production tree is now the prefix-hit tree with its own fast-load
+sidecar. The previous vision tree and its sidecar stay on disk as the rollback pair.
+[`results/gates/prefix-hit-and-kpool-tail.md`](results/gates/prefix-hit-and-kpool-tail.md) §6.
+
+**What the entry below decided, and why this one overturns it.** The rollback rested on one boot of
+the both-knobs arm returning needle-lite 5/6 twice, after half the evidence for it had already
+collapsed — the `matrix` code-exam item failed on unpatched production twenty minutes later. What
+remained was one unreproduced observation. The answer to that is more boots and a directed test, not
+a shelf.
+
+**Two boots through the autostart unit, full battery on each** `[measured-here]`: `/health` at
+**251 s** and **265 s**, KV pools **7,044,077** and **7,041,322** — inside this configuration's
+documented 6,914,600–7,143,250 spread, and boot 2 within 0.01 % of the published 7,041,322. Boot 1
+also took a fifteen-minute mixed soak (eight concurrent streams, code and prose, plus two
+4,096-token generations; 124 requests, **132,867 tokens, engine alive, zero errors**) and a second
+full battery after it. **Nine needle-lite runs, nine 6/6.** Three code exams, three **12/12 on the
+first attempt** — `matrix` did not fail once. Probe 10/10 twice, tool-call 8/8 twice, vision 5/5
+three times. A third boot proved the unit brings the promoted configuration up by itself: 266 s,
+probe 10/10, vision 5/5.
+
+**The cached-path equality test, which is the measurement that settled it.** A warm 5/6 would mean
+one thing: a prompt served partly from cache answering differently from the same prompt computed in
+full. So that was tested directly — 24 needle-style prompts at **~11K, ~84K and ~178K** tokens, eight
+each at eight depths, every one with its own filler seed, each asked cold and then repeated
+byte-for-byte with the engine's prefix-cache counters read either side so the repeat is *proved* to
+be a hit. **24 of 24 repeat answers byte-identical to their cold answers, and all 24 correct on both
+passes**; mean repeat hit **94.7 %** against 0.0 % cold; every size class on its ceiling (88.1 % at
+11K where the ceiling is 88.1 %, 95.8–96.4 % at 84K, 98.1–99.8 % at 178K). New instrument,
+`cached-equality.py`. `[measured-here]`
+
+**A finding that came out of getting the test wrong first, and it is the more useful half.** The
+original design asked all 24 prompts cold and then repeated all 24. **Every repeat hit 0.0 %** and
+took its full cold time — 97.5 s on a 177K prompt against 1.1 s when repeated immediately. Twenty-three
+long requests in between leave nothing behind. So every hit ratio this repository publishes is a
+back-to-back number, and "the same prompt again, later in a busy hour" has never been measured here.
+The mechanism is not measured either and is not asserted: [docs/11](docs/11-open-issues.md) §2.34.
+
+**What it cost.** Nothing in memory (three KV pools inside the spread; host RAM and swap where
+configuration 13 already sat) and nothing in quality that was looked for. Speed was **not** re-measured
+on these boots `[not tested]` — it belongs to a session with a control arm, and the same-session A/B
+below has it. The real price is disk: a second ~53 GB-per-node sidecar, kept alongside the first
+because the pair is the rollback. One prose generation in the soak tripped the repetition heuristic
+at 59.5 % and **its text had not been kept** — an instrument gap, now fixed; the same prompt came back
+at 4.2 % alone and 1.9–18.7 % across eight concurrent generations, so it did not reproduce, and it is
+recorded as one unexplained observation rather than explained away.
+
+**What is not discharged.** The gates still have no measured flake rate. Three clean code exams are
+not a baseline, and [HELP-WANTED](HELP-WANTED.md) §12 part one stands exactly as written.
+
+---
+
 ## 2026-09-08 — Two upstream backports, measured; neither promoted, and the gate that judged them has a flake rate
 
 **No change to the production configuration.** `.env.tp3` was never edited — verified byte-identical

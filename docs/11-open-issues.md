@@ -1616,7 +1616,8 @@ production 12's ~62 %. The code permitted this and nothing had demonstrated it.
 
 ### 2.32 The hybrid prefix-cache hit — nothing flags the drafter, so everything gets flagged
 
-**OPEN. Measured on 8 September 2026 and NOT in the recipe.** Patch, mechanism and full numbers:
+**CLOSED for this stack, 8 September 2026: `HAREM_PREFIX_HIT=1` is in the recipe.** Still open
+upstream, and still open for anyone on a vLLM without #52047. Patch, mechanism and full numbers:
 [`tracks/tp3/patches/prefix-hit-and-kpool-tail/`](../tracks/tp3/patches/prefix-hit-and-kpool-tail/README.md),
 [`results/gates/prefix-hit-and-kpool-tail.md`](../results/gates/prefix-hit-and-kpool-tail.md).
 
@@ -1634,21 +1635,29 @@ an exact repeat of an 8,008-token prompt hits **41.56 %** against a **83.12 %** 
 every scenario, on every repeat. With the patch: 83.12 % at 8K — **the ceiling** — and follow-up TTFT
 from 2.830 s to **1.076 s, −62.0 %**; a four-turn agent conversation goes the same way.
 
-**Why it is not in the recipe.** Two reasons, neither of them "it does not work". The acceptance bar
-was a *raw* hit ratio of 95 %, which the 3,328-token granularity makes unreachable at 8K, and the
-60K case did not move at all — its offset past the aligned boundary is 6 tokens, so the drafter's own
-drop has no block to give back and costs a full 3,328 on re-alignment (about 7.7 % of prompt lengths
-are in that window). And one boot of the both-knobs arm returned needle-lite 5/6 twice; six later
-runs of the same configuration returned 6/6, so it is unreproduced rather than refuted. See §2.33 for
-the gate-flake finding that narrowed, but did not eliminate, that concern.
+**Why it was held for several hours, and what promoted it.** The acceptance bar was a *raw* hit
+ratio of 95 %, which the 3,328-token granularity makes unreachable at 8K; that bar is now restated in
+ceiling terms, and by that reading the patch is perfect at every size tested. The 60K case genuinely
+does not move — its offset past the aligned boundary is 6 tokens, so the drafter's own drop has no
+block to give back and costs a full 3,328 on re-alignment (about 7.7 % of prompt lengths are in that
+window), and that residual is unchanged by the promotion. The other reason was one boot of the
+both-knobs arm returning needle-lite 5/6 twice. It was promoted after **two further boots through the
+autostart unit with nine needle-lite runs at 6/6**, three code exams at 12/12 on the first attempt,
+and a **cached-path equality test** built for that exact failure mode: 24 prompts at ~11K, ~84K and
+~178K tokens, each asked cold and then repeated byte-for-byte with the cache counters read either
+side, **24 of 24 answers byte-identical and correct**, mean repeat hit 94.7 % against 0.0 % cold
+`[measured-here]`. The two 5/6 now stand at two failures in eighteen runs, both inside one boot.
+[`results/gates/prefix-hit-and-kpool-tail.md`](../results/gates/prefix-hit-and-kpool-tail.md) §6.
 
 **If this stack rebases onto a vLLM carrying #52047**, our anchor disappears and the right move is
 #54041's marker — `non_causal_multi_token_decode` on the drafter's `SlidingWindowSpec` — not to
 re-add ours. The patch fails closed on a drifted anchor, so it cannot pass silently.
 
-### 2.33 The K-pool tail slot mapping — a real correctness bug, measured, and still not shipped
+### 2.33 The K-pool tail slot mapping — a real correctness bug, measured, and now shipped
 
-**OPEN. Not ours:** found, reproduced and fixed by [vcruz305](https://github.com/vcruz305)
+**CLOSED for this stack, 8 September 2026: `HAREM_KPOOL_TAIL_FIX=1` is in the recipe.** Still open
+upstream, and still open for every hybrid model on an unpatched vLLM.
+**Not ours:** found, reproduced and fixed by [vcruz305](https://github.com/vcruz305)
 ([CREDITS](../CREDITS.md)) on the same base image in August. We had been serving it for a fortnight.
 
 `KpoolTailSpec` is a one-block circular scratch cache — `max_num_blocks_per_req() == 1`,
@@ -1675,17 +1684,50 @@ the wrong block, not the overrun — and on this build there is nothing for a cl
 the second independent reason the clamp is the wrong layer (his own measurement, that it changed
 nothing, is the first).
 
-**Why it is not in the recipe.** Its own arm was clean on everything except the battery run after a
-soak, which lost the code exam's `matrix` item — and that item then failed on the **restored,
-unpatched production** on its first run and passed four times after, so it is a flaky item and is
-withdrawn as evidence. The honest position is that the K-pool half has no demonstrated cost and one
-night is not three boots. It is the first thing to promote when the reproduction is done.
+**What held it, and what promoted it.** Its own arm was clean on everything except the battery run
+after a soak, which lost the code exam's `matrix` item — and that item then failed on the **restored,
+unpatched production** on its first run and passed four times after, so it is a flaky item and was
+withdrawn as evidence. It went in the same night alongside §2.32, on two boots through the autostart
+unit with every gate full and a third boot to prove the unit brings the configuration up by itself.
+Nothing was found that it costs: KV pools of 7,044,077 / 7,041,322 / 6,947,658 against a documented
+6,914,600–7,143,250 spread, and speed unchanged on the same-session A/B that measured it
+`[measured-here]`.
 
 **What this session actually established, and it is not about either patch.** We adjudicated two
 changes with gates whose own flake rate nobody had measured. `matrix` failed 2 of 12 code exams,
 including once with no patch tree present. **A gate baseline — every gate, ten runs, cold and after a
 soak, on the production configuration — is now the cheapest useful measurement on the list**
 ([HELP-WANTED](../HELP-WANTED.md) §12).
+
+### 2.34 A repeat that arrives later hits nothing — every hit ratio here is a back-to-back number
+
+**OPEN, measured 8 September 2026.** Mechanism `[not tested]`.
+
+Every prefix-cache hit ratio this repository publishes — §2.32, the production baseline, all of
+[`results/gates/prefix-hit-and-kpool-tail.md`](../results/gates/prefix-hit-and-kpool-tail.md) §1 and
+§2.1 — comes from asking a prompt and then immediately asking it again. The first version of the
+cached-path equality test asked 24 distinct prompts cold and then repeated all 24 in the same order.
+**All 24 repeats hit 0.0 %**, and each took the same wall time as its cold pass — 97.5 s on a
+177K-token prompt, against 1.1 s when the same prompt is repeated immediately `[measured-here]`.
+Twenty-three long requests in between leave nothing of the first one behind, on a pool of 7,041,322
+tokens against about 2.2 M of prompt.
+
+So "the same prompt again, immediately" and "the same prompt again, later in a busy hour" are
+different measurements on this stack, and only the first has ever been measured here. That matters
+for reading the TTFT and hit numbers as a production expectation: an agent that re-sends its history
+on the next turn is the first case, a user returning to a conversation after other traffic is the
+second.
+
+**What decides it is not measured.** The plausible reason is the hybrid model's non-caching groups —
+the four `MambaSpec` KDA groups hold per-request state whose slot count is small and unrelated to the
+token capacity of the pool, so a coordinator hit needs every group to still hold its part. That is a
+hypothesis, not a measurement, and this stack's own rule is that a mechanism nobody measured is not
+an explanation. What would settle it: vary the number of intervening requests and find where the hit
+ratio falls off, and read the per-group block counts either side.
+
+The model's answers were identical and correct in all 24 uncached repeats, so nothing here is about
+output quality. Instrument: `cached-equality.py --order passes` in
+[`tracks/tp3/patches/prefix-hit-and-kpool-tail/`](../tracks/tp3/patches/prefix-hit-and-kpool-tail/README.md).
 
 ## 3. Never run
 

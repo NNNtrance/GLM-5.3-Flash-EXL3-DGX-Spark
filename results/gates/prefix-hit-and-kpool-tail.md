@@ -7,6 +7,12 @@ the prelude so the control runs the same bytes as the candidate, which is the ar
 used. Patch page:
 [`tracks/tp3/patches/prefix-hit-and-kpool-tail/`](../../tracks/tp3/patches/prefix-hit-and-kpool-tail/README.md).
 
+**Sections 1-5 are the session that measured these two patches and rolled them back. Section 6 is
+what happened next: both knobs went into the recipe later the same night, after two boots through
+the autostart unit, nine needle-lite runs and a test written to answer the one observation that had
+stopped them.** Where 1-5 say "not promoted", read them as the record of a decision section 6
+revisits with more boots; the measurements in them stand.
+
 Settings for every number on this page unless stated otherwise: image `exl3-zeus:754421f`,
 checkpoint `turboderp/GLM-5.3-Flash-exl3@4.05bpw` (full scope), TP=3 + expert parallel, DFlash2
 `k=7` with draft KV at fp8, `gpu-memory-utilization 0.88`, `--block-size 256`,
@@ -65,10 +71,10 @@ is timed from `docker run` to `/health` 200.
 | **off** — control | none | 294 s | 7,046,831 |
 | det0 — evidence | `HAREM_KPOOL_TAIL_BOUNDS=1` | 293 s | — |
 | det1 — evidence | `HAREM_KPOOL_TAIL_FIX=1 HAREM_KPOOL_TAIL_BOUNDS=1` | 314 s | — |
-| **ab** — both knobs | `HAREM_PREFIX_HIT=1 HAREM_KPOOL_TAIL_FIX=1` | 293 s | 6,936,639 |
+| **ab** — both knobs, **what ships** (section 6) | `HAREM_PREFIX_HIT=1 HAREM_KPOOL_TAIL_FIX=1` | 293 s | 6,936,639 |
 | ab, second boot | the same | 294 s | — |
 | armA | `HAREM_PREFIX_HIT=1` | 315 s | 7,013,774 |
-| armB — **what ships** | `HAREM_KPOOL_TAIL_FIX=1` | 294 s | 6,914,600 |
+| armB | `HAREM_KPOOL_TAIL_FIX=1` | 294 s | 6,914,600 |
 
 `[measured-here]`
 
@@ -142,7 +148,7 @@ boots on 7 September. `[measured-here]`
 
 ---
 
-## 3. The K-pool tail — what ships
+## 3. The K-pool tail — the bug, and the evidence either side of the knob
 
 ### 3.1 The detector, either side of the knob
 
@@ -183,7 +189,7 @@ group is flagged, the target's is not, and both fail-closed refusals fire.
 
 ---
 
-## 4. The prefix-cache half — measured, and not in the recipe
+## 4. The prefix-cache half — what it bought, and what it did not settle that night
 
 ### 4.1 What it bought
 
@@ -238,7 +244,9 @@ identical soak in front of the gate on the second boot and came back 6/6 twice.
 
 We are not calling it noise and we are not calling it a bug. It is one boot, and
 [docs/09](../../docs/09-measurement-protocol.md) §1 says a single boot settles nothing — which
-applies to a failure as much as to a gain. The patch stays in the tree with its knob unset.
+applies to a failure as much as to a gain. The patch stayed in the tree with its knob
+unset until section 6, where six more needle-lite runs across two fresh boots came back 6/6 and the
+cached path was tested directly.
 
 ---
 
@@ -282,7 +290,7 @@ What survives is narrower: **one boot** of the both-knobs arm returning needle 5
 later runs of that configuration returning 6/6 — including concurrently and after an identical soak
 — and against 6/6 on the control, the prefix-hit-only arm and the K-pool-only arm, three runs each.
 
-**Nothing was promoted.** `.env.tp3` was verified byte-identical to its dated backup on all three
+**Nothing was promoted that night — section 6 is what changed it.** `.env.tp3` was verified byte-identical to its dated backup on all three
 nodes; the production tree and its sidecar were never touched. Restoring production was `systemctl
 start`: `/health` 200 at **255 s**, KV pool **7,066,115**, probe 10/10, tool-call 8/8, needle 6/6,
 vision 5/5, and the code exam 11/12 on its first run and 12/12 on the four after it.
@@ -291,3 +299,147 @@ vision 5/5, and the code exam 11/12 on its first run and 12/12 on the four after
 own flake rate we had never measured. Two accidental data points on that flake rate were enough to
 overturn half of a decision. A gate baseline — every gate, ten runs, cold and post-soak, on the
 production configuration — is now the cheapest useful measurement on this stack's list.
+
+---
+
+## 6. Promotion — the two-boot protocol, later the same night
+
+**Both knobs are now in the recipe.** The rollback in §5 rested on one boot of the both-knobs arm
+returning needle-lite 5/6 twice, and half the table it was decided on had already fallen over (§5.2).
+What that left was an unreproduced observation, not a refutation — so the change was put through a
+targeted protocol instead of being shelved: **two separate boots of the both-knobs arm through the
+autostart unit, the full battery on each, needle-lite three times per battery, and a new test aimed
+squarely at the thing the 5/6 would have meant if it were real.**
+
+The arm is production's environment file with four lines different: the patch tree, its overlay, its
+fast-load sidecar, and `HAREM_PREFIX_HIT=1 HAREM_KPOOL_TAIL_FIX=1` at the front of `EXTRA_ENV`.
+`gpu-memory-utilization` 0.88, `--block-size 256`, `--max-num-batched-tokens 2048` and the vision
+limits are byte-identical to the configuration that was serving — verified by `diff`, not by
+reading.
+
+### 6.1 The two boots
+
+Both booted through `harem-exl3.service` itself, which is the only way to reach this arm: the unit
+reads `ENV_FILE=$HOME/exl3-zeus/.env.tp3` and takes the tree, the overlay and the sidecar from that
+file, so promotion is a file swap and the unit is untouched.
+
+| | boot 1 | boot 2 | boot 3, the proof |
+|---|---|---|---|
+| `/health` 200 | **251 s** | **265 s** | **266 s** |
+| KV pool | **7,044,077** | **7,041,322** | **6,947,658** |
+| correctness probe | 10/10 | 10/10 | 10/10 |
+| code exam | **12/12** cold, **12/12** after the soak | **12/12** | — |
+| tool-call gate | 8/8 | 8/8 | — |
+| needle-lite ×3, cold | **6/6 · 6/6 · 6/6** | **6/6 · 6/6 · 6/6** | — |
+| needle-lite ×3, after the soak | **6/6 · 6/6 · 6/6** | — | — |
+| vision K2 (4 images) + K4 (video) | 5/5 | 5/5 | 5/5 |
+| free host RAM after · swap used | 1.8 / 3.7 / 3.7 GiB · 0.06 / 0 / 0 | 2.0 / 3.8 / 3.8 GiB · 0.06 / 0 / 0 | — |
+
+`[measured-here]`. **Nine needle-lite runs, nine 6/6** — against the two 5/6 that stopped promotion
+on 8 September, which now stand at two failures in eighteen runs of this configuration, both inside
+one boot. Three code exams, three 12/12 on the first attempt: `matrix`, which failed 2 of the 12
+exams in the earlier session including once on unpatched production, did not fail once here. The KV
+pools sit inside this configuration's documented boot-to-boot spread of 6,914,600–7,143,250, and
+boot 2's is within 0.01 % of the 7,041,322 this repository publishes for configuration 12.
+
+Boot 3 is the promotion check and nothing else: `.env.tp3` already swapped, `systemctl restart`,
+and the two cheapest gates that would catch a wrong configuration. It came up at 266 s with both
+knobs and the vision tower in the log, probe 10/10 and vision 5/5 — the unit brings up the promoted
+configuration on its own, which is what a power cut would do.
+
+### 6.2 The cached-path equality test — the one that mattered
+
+A 5/6 on a warm needle would mean one thing: **a prompt served partly from the prefix cache answers
+differently from the same prompt computed in full.** That is testable directly, so we tested it
+rather than re-running the gate that raised it.
+
+24 needle-style prompts, a unique code planted in unique filler — eight prompts at each of three
+sizes, eight depths from 2 % to 97 %, every prompt with its own random seed so no two share a prefix
+beyond the chat template. Each is asked **cold**, then **repeated byte-for-byte**, with the engine's
+prefix-cache counters read either side of every request so the repeat is *proved* to be a cache hit
+rather than assumed. Temperature 0, thinking on at effort low, `max_tokens` 64.
+
+| nominal | measured `n` | cold hit | repeat hit | ceiling | cold → repeat | identical | correct |
+|---|---|---|---|---|---|---|---|
+| ~11K | 11,196 – 11,329 | 0.0 % | **88.1 – 89.2 %** | 88.1 % | 6.5 s → **1.1 s** | 8/8 | 8/8 |
+| ~84K | 82,859 – 83,359 | 0.0 % | **95.8 – 96.4 %** | 96.1 % | 45.4 s → **2.2 s** | 8/8 | 8/8 |
+| ~178K | 176,454 – 177,566 | 0.0 % | **98.1 – 99.8 %** | 99.8 % | 97.8 s → **1.1 s** | 8/8 | 8/8 |
+
+`[measured-here]`. **24 of 24 repeat answers are byte-identical to their cold answers, and all 24 are
+correct on both passes** — zero differing-but-correct pairs, against a tolerance of one. Mean repeat
+hit ratio **94.7 %** against 0.0 % cold. Every class lands on its ceiling, which is the prefix-hit
+patch doing exactly what §2.1 measured, now at three prompt sizes instead of two.
+
+The prompts came out longer than the nominal sizes this protocol asked for (~8K / ~60K / ~128K)
+because this filler tokenises at about 1.82 tokens per word rather than the 1.30 of
+`needle-lite6.py`'s word list. They were left as they were: every row carries its measured `n`, and
+178K is a harder test than 128K, not an easier one.
+
+### 6.3 A repeat that arrives later hits nothing at all
+
+The first version of this test asked all 24 prompts cold and then repeated all 24. **Every one of the
+24 repeats hit 0.0 %** and took the same time as its cold pass — 97.5 s on the 178K prompts, not the
+1.1 s above. Twenty-three long requests in between are enough to leave nothing of the first one
+behind. `[measured-here]`
+
+The test refused to score that as a pass, which is why the hit-ratio check is in it: a cached-path
+equality test whose repeats never touch the cache proves nothing about the cached path. Rewritten to
+interleave cold and repeat, it produced §6.2.
+
+**The finding is worth more than the bug in our first design.** Every hit ratio this page reports —
+including all of §1 and §2.1, and the production baseline measured before any of this — comes from
+back-to-back repeats. "The same prompt again, immediately" and "the same prompt again, later in a
+busy hour" are not the same measurement on this stack, and only the first one has ever been measured
+here. What decides how much survives is presumably the hybrid model's non-caching groups, whose
+state count is small and unrelated to the token capacity of the pool — but that is a mechanism we
+have **not** measured `[not tested]`, and it is now [docs/11](../../docs/11-open-issues.md) §2.34.
+Both answers were still identical and correct in the 24 uncached repeats, so nothing about model
+behaviour changes; what changes is what a hit ratio from this repository means.
+
+### 6.4 The soak, and the one row that tripped a heuristic
+
+Between the two batteries on boot 1: eight concurrent streams — four code, four prose, looping —
+plus two 4,096-token generations, for fifteen minutes. Ten requests in flight against
+`--max-num-seqs 8`, so the scheduler queues as well as batches. **124 requests, 132,867 tokens,
+16.0 minutes, engine alive, zero errors**, five generations returning the documented empty-`content`
+with a full budget. `[measured-here]` The battery immediately after was clean.
+
+One prose generation tripped the soak's repetition heuristic: 1,024 of 1,024 tokens, no error, but a
+single word taking 59.5 % of the output against a 35 % threshold. **Its text was not kept — that was
+a gap in our instrument, and it is fixed rather than argued around** (the soak now records the head,
+the tail and the top word of every generation). What we can say is what we measured afterwards: the
+same prompt run alone came back at 4.2 %, and eight concurrent generations across that prompt family
+came back at 1.9 – 18.7 %, so it did not reproduce. It is recorded as one unexplained,
+unreproduced observation. It touches none of the gates above.
+
+### 6.5 What this cost
+
+Speed, quality and memory, together, as this repository requires.
+
+- **Memory:** KV pools of 7,044,077 / 7,041,322 / 6,947,658 across three boots against a documented
+  spread of 6,914,600 – 7,143,250 for the same code. **Read as unchanged.** Free host RAM and swap
+  after a full battery plus a fifteen-minute soak are 1.8 / 3.7 / 3.7 GiB and 0.06 / 0 / 0 GiB,
+  which is where configuration 13 already sat.
+- **Speed:** not re-measured on these boots `[not tested]` — §2.3 and §5.1 measured it on the same
+  two arms in one session against a same-session control, every level inside its band, and nothing
+  in the promotion changed a flag that touches the decode path. The sweep belongs to a session with
+  a control arm in it, not to a promotion boot.
+- **Disk:** the real price, and it was paid on 8 September. The patch scripts join the fast-load
+  identity hash, so this configuration needs its own ~53 GB-per-node sidecar. Both sidecars stay on
+  disk — the promoted one and the previous vision one — because the pair is the rollback, and 53 GB
+  per node against 546 GB free is not a reason to delete a way back.
+- **Quality:** nothing lost that was looked for. Nine needle runs, three code exams, two probes, two
+  tool-call gates, three vision smokes, and the equality test above.
+
+### 6.6 What is still open
+
+The prefix-cache half's **acceptance bar was a raw 95 % hit ratio and it is still not met at 11K**,
+where 88.1 % is the ceiling and the patch reaches it. The bar was unreachable as written; §0 says
+why, and the honest reading is the quotient. Restating it in ceiling terms is the correction, and
+the 60K case in §2.1 — where the drafter's own drop costs a full block because the prompt ends six
+tokens past an alignment boundary — is a real residual that no environment flag removes. The patched
+arm has still not been swept across the four offsets of §4.2 `[not tested]`.
+
+And the item that outlived both patches: **the gates still have no measured flake rate.** Three
+12/12 code exams tonight do not establish one. [HELP-WANTED](../../HELP-WANTED.md) §12 part one
+stands unchanged.

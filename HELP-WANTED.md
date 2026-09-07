@@ -569,19 +569,25 @@ after a ~49,000-token soak**, and publish the per-item pass rate. Ours are in `s
 nothing until that number exists, and every A/B this repository has published against those gates
 would be sharper with it.
 
-**Part two.** Three boots each of four arms — control, `HAREM_KPOOL_TAIL_FIX=1`,
-`HAREM_PREFIX_HIT=1`, both — with the full battery cold, a soak, and the full battery again. Twelve
-batteries, about four hours, judged against the baseline from part one. What we are looking for is
-one unreproduced observation: on one boot of the both-knobs arm, needle-lite returned 5/6 twice
-(the earliest of six needles in a 54,694-token haystack, answered with an invented code), and six
-later runs of that same configuration returned 6/6, including under concurrency and after an
-identical soak.
+**Part two is now partly done, and part one is not.** Both patches were promoted later the same
+night on two further boots through the autostart unit — nine needle-lite runs at 6/6, three code
+exams at 12/12 on the first attempt, and a cached-path equality test built for the exact failure the
+5/6 would have meant: 24 prompts at ~11K, ~84K and ~178K tokens, each asked cold and then repeated
+byte-for-byte, 24 of 24 answers identical and correct
+([`results/gates/prefix-hit-and-kpool-tail.md`](results/gates/prefix-hit-and-kpool-tail.md) §6). The
+two 5/6 now stand at two failures in eighteen runs of that configuration, both inside one boot.
 
-If the arms match the baseline, the K-pool half fixes a measured correctness bug at no measured cost
-and should go in; the prefix-cache half doubles the exact-repeat hit at 8K and cuts follow-up TTFT by
-62 %, and its acceptance bar should be restated in ceiling terms because a raw 95 % is unreachable at
-that prompt length. Everything needed is in the repository: both patch scripts, the detector, the
-probe, the soak and the unit tests.
+**None of that is a flake baseline, and part one is still the ask.** Three clean code exams do not
+establish a per-item pass rate; a gate whose flake rate is unknown could not adjudicate those two
+patches and cannot adjudicate the next one either. If you have the hardware, part one is still the
+cheapest useful thing on this page, and it needs no patch at all.
+
+**Also still open, and cheap:** the patched arm has never been swept across the four prompt offsets
+that decide whether the drafter's own last-block drop is free (`offset-sweep.py`; the control's sweep
+is §4.2 of the results page). And a repeat that arrives *later* — after other traffic — hits nothing
+at all on this stack, which we measured by accident and cannot yet explain: [docs/11](docs/11-open-issues.md)
+§2.34. Everything needed is in the repository: both patch scripts, the detector, the probe, the two
+soaks, the equality test and the unit tests.
 
 ## What we would rather you did not send
 

@@ -1,25 +1,32 @@
 # `patches/prefix-hit-and-kpool-tail` — the repeated prefix, and the one-row tail
 
 Two backports into the pinned vLLM this stack serves (`487ecf187`, 25 August 2026), measured in the
-same session against the same control. **Neither is in the recipe**, and why is the most useful
-thing on this page: both do what they say, and a quality gate wobbled three times across four
-patched arms while the control's identical battery came back clean.
+same session against the same control. **Both are now in the recipe.** They were not, for most of
+one night: a quality gate wobbled three times across four patched arms while the control's identical
+battery came back clean, and that stopped promotion. Then the gate itself turned out to flake on
+unpatched production, which took half the evidence away, and the rest was put through a two-boot
+protocol with a test aimed at the one thing that was left. That is
+[section 6 of the results page](../../../../results/gates/prefix-hit-and-kpool-tail.md#6-promotion--the-two-boot-protocol-later-the-same-night),
+and it is the part worth reading.
 
 | | Knob | What it does | Status |
 |---|---|---|---|
-| **K-pool tail slot mapping** | `HAREM_KPOOL_TAIL_FIX=1` | 99.67 % of the indexer tail's writes were addressing a block that is not the request's own; the fix takes that to **0.00 %** | **Measured, not shipped** — [§5](#5-why-neither-is-in-the-recipe) |
-| **Hybrid prefix-cache hit** | `HAREM_PREFIX_HIT=1` | doubles the exact-repeat hit at 8K (41.56 % → 83.12 %, the ceiling) and cuts follow-up TTFT by **62 %** | **Measured, not shipped** — [§3](#3-why-the-prefix-cache-half-did-not-clear-its-bar), [§5](#5-why-neither-is-in-the-recipe) |
+| **K-pool tail slot mapping** | `HAREM_KPOOL_TAIL_FIX=1` | 99.67 % of the indexer tail's writes were addressing a block that is not the request's own; the fix takes that to **0.00 %** | **In the recipe**, 8 September |
+| **Hybrid prefix-cache hit** | `HAREM_PREFIX_HIT=1` | doubles the exact-repeat hit at 8K (41.56 % → 83.12 %, the ceiling) and cuts follow-up TTFT by **62 %** | **In the recipe**, 8 September — its acceptance bar is restated in ceiling terms, [§3](#3-the-bar-this-half-was-given-and-why-it-was-the-wrong-bar) |
 
 Both patch scripts are in the tree and are applied unconditionally by the prelude; only the
 environment file decides which behaviour is armed. With both knobs unset the patched image is
-upstream on both paths, byte for byte — which is what the control arm ran, and what the production
-configuration runs today.
+upstream on both paths, byte for byte — which is what the control arm ran. The production
+environment file now sets both, and the previous vision tree and its fast-load sidecar stay on disk
+as the rollback pair: putting the dated backup of `.env.tp3` back and restarting the unit is the
+whole of it.
 
-**This page is a negative result with two positive measurements inside it.** The bugs are real, the
-fixes work, the instruments are here, and so is the evidence that stopped promotion — including the
-part of that evidence which fell over twenty minutes after the decision. What is missing is boots,
-and a flake baseline for the gates that judged them. Both are written up in
-[HELP-WANTED](../../../../HELP-WANTED.md) §12.
+**The most useful thing on this page is not either patch — it is that we adjudicated both of them
+with gates whose own flake rate we had never measured.** Two accidental data points on that flake
+rate overturned half a decision within twenty minutes of it being made. The patches then went in on
+two fresh boots and a directed test; the flake baseline that would have made the first night's
+verdict trustworthy still does not exist, and it is
+[HELP-WANTED](../../../../HELP-WANTED.md) §12 part one.
 
 Everything measured is in
 [`results/gates/prefix-hit-and-kpool-tail.md`](../../../../results/gates/prefix-hit-and-kpool-tail.md).
@@ -39,6 +46,8 @@ Standing items: [docs/11](../../../../docs/11-open-issues.md) §2.32 and §2.33.
 | [`kpool-soak.py`](kpool-soak.py) | The long-generation soak: eight concurrent 4,096-token generations and two 8,192-token ones, with a coherence check on each. Position is what drives the tail bug, so what it stresses is generation length, not prompt length |
 | [`offset-sweep.py`](offset-sweep.py) | Holds everything fixed and varies only `n mod 3328`, which is what decides whether the drafter's drop is free |
 | [`needle-lite6.py`](needle-lite6.py) | Six needles at six depths of one ~54,700-token haystack, sequential or `concurrent`. Thinking stays on and `enable_thinking=false` is never sent; it scores `content` and reports `either` separately, as `correctness-probe.py` does |
+| [`cached-equality.py`](cached-equality.py) | **The test that settled the promotion.** 24 needle-style prompts at three sizes, each asked cold and then repeated byte-for-byte, with the prefix-cache counters read either side so the repeat is *proved* to be a hit. Passes only if every repeat answer is identical to its cold answer and both are correct. `--order passes` reproduces the design that does not work, and section 6.3 of the results page says why |
+| [`mixed-soak.py`](mixed-soak.py) | Fifteen minutes of eight concurrent streams, half code and half prose, plus two 4,096-token generations — ten in flight against `--max-num-seqs 8`, so the scheduler queues as well as batches. Records the head, tail and top word of every generation, so a row its repetition heuristic flags can be read instead of guessed at |
 
 ## The knobs
 
@@ -197,10 +206,10 @@ this with graphs on and believe a zero.
 
 ---
 
-## 3. Why the prefix-cache half did not clear its bar
+## 3. The bar this half was given, and why it was the wrong bar
 
-Separately from §5, which applies to both halves, this one also missed the bar it was given.
-Neither point is "it did not work" — it works, and the numbers are in
+This half cleared everything except the acceptance criterion it was handed, and that criterion was
+unreachable as written. Neither point was ever "it did not work" — it works, and the numbers are in
 [`results/gates/prefix-hit-and-kpool-tail.md`](../../../../results/gates/prefix-hit-and-kpool-tail.md).
 
 **The bar was a raw hit ratio, and the ceiling makes that bar unreachable.** The bar was set in advance as *an exact
@@ -252,13 +261,13 @@ it did not survive is the battery after that soak — §5. `[measured-here]` The
 [`results/gates/prefix-hit-and-kpool-tail.md`](../../../../results/gates/prefix-hit-and-kpool-tail.md)
 §3. The one real cost is a **fresh fast-load sidecar** — the patch scripts join the identity hash, so
 promoting them re-dumps ~53 GB per node on a 495 s boot
-([docs/08](../../../../docs/08-fast-boot.md)). We paid it once for both patches together, which is
-why the prefix-hit script rides along in the tree with its knob unset: arming it later is an
-environment-file edit, not another dump.
+([docs/08](../../../../docs/08-fast-boot.md)). It was paid once for both patches together, which is
+why promoting the second half hours later was an environment-file edit and not another dump — and
+why the previous sidecar is kept rather than deleted: with it, so is the way back.
 
 ---
 
-## 5. Why neither is in the recipe
+## 5. Why neither went in that night, and what changed
 
 The thing that stopped promotion is not in either patch's own numbers. It is a pattern across the
 arms, and it took the whole night to see because the measurement that would have shown it early was
@@ -303,26 +312,41 @@ its band.
    patched arms ran a battery after a soak, so the alarm came from a comparison that was not like for
    like. The control's post-soak battery — clean — was the last measurement of the night.
 
-**Nothing was promoted. `.env.tp3` was never edited** — it was verified byte-identical to its dated
-backup on all three nodes at the end — and the production patch tree and its fast-load sidecar were
-never touched, so the rollback was "start the unit", which came back at **255 s** with the KV pool at
-**7,066,115** and every gate full.
+**Nothing was promoted at that point. `.env.tp3` was never edited during that session** — it was
+verified byte-identical to its dated backup on all three nodes at the end — and the production patch
+tree and its fast-load sidecar were never touched, so the rollback was "start the unit", which came
+back at **255 s** with the KV pool at **7,066,115** and every gate full.
 
-**What would settle it.** Two things, in this order.
+## 6. The promotion, and what settled it
 
-First, **a flake baseline for the gates themselves**, which this session did not have and which is
-the cheapest measurement on the list: run the correctness probe, the code exam, the tool-call gate
-and needle-lite ten times each on the production configuration, cold and after a soak, and write down
-the per-item pass rate. Tonight produced two data points by accident — `matrix` failed 2 of 12 code
-exams — and they were enough to overturn half a decision. A gate whose flake rate is unknown cannot
-adjudicate a patch.
+Two things were owed: more boots, and a test aimed at what the 5/6 would have meant. Both were run
+the same night, and the full write-up is
+[section 6 of the results page](../../../../results/gates/prefix-hit-and-kpool-tail.md#6-promotion--the-two-boot-protocol-later-the-same-night).
+In short `[measured-here]`:
 
-Second, **three boots per arm** — control, K-pool only, prefix-hit only, both — each running the full
-battery cold, then a ~49,000-token soak, then the full battery again. Twelve batteries, about four
-hours. Judged against the baseline from the first step. If the arms match the baseline, both patches
-are clear, and the K-pool half should go in on its own merits because it fixes a measured correctness
-bug. The tree and its fast-load sidecar stay on disk, so arming an arm is one environment line and no
-dump boot.
+- **Two boots of the both-knobs arm through the autostart unit** — `/health` at 251 s and 265 s, KV
+  pools 7,044,077 and 7,041,322, both inside this configuration's 6,914,600–7,143,250 spread. Full
+  battery on each, plus a fifteen-minute mixed soak and a second battery on boot 1.
+  **Nine needle-lite runs, nine 6/6.** Three code exams, three 12/12 on the first attempt —
+  `matrix` did not fail once. Probe 10/10 twice, tool-call 8/8 twice, vision 5/5 three times.
+- **The cached-path equality test**, `cached-equality.py`, written for exactly the failure mode a
+  warm 5/6 would imply: 24 prompts at ~11K, ~84K and ~178K tokens, each asked cold and then repeated
+  byte-for-byte with the cache counters read either side. **24 of 24 repeat answers byte-identical to
+  their cold answers and correct on both passes**, mean repeat hit 94.7 % against 0.0 % cold, every
+  size class on its ceiling.
+- **A third boot** to prove the unit brings up the promoted configuration by itself: 266 s, both
+  knobs in the log, probe 10/10, vision 5/5.
+
+The K-pool half went in on its own merits — it fixes a measured correctness bug and nothing was found
+that it cost. The prefix-cache half went in with its bar restated in ceiling terms, because a raw
+95 % is unreachable at these prompt lengths and the patch reaches the ceiling at every size we tested.
+
+**What is still owed, and the promotion does not discharge it:** a flake baseline for the gates.
+Run the correctness probe, the code exam, the tool-call gate and needle-lite ten times each on the
+production configuration, cold and after a soak, and write down the per-item pass rate. Three clean
+code exams do not establish one. `matrix` failed 2 of 12 exams on 8 September, once with no patch
+tree present, and a gate whose flake rate is unknown cannot adjudicate the next patch either.
+[HELP-WANTED](../../../../HELP-WANTED.md) §12 part one stands.
 
 ---
 
