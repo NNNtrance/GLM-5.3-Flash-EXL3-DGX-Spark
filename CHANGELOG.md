@@ -11,6 +11,48 @@ rounds, which is what the persisted MLA tuner cache bought — see
 
 ---
 
+## 2026-09-08 — What the same engine scores when it is allowed to think: 90.3 against 85.5, and the four scenarios that were the gap
+
+**tool-eval-bench at reasoning effort `high`: `final_score` 91, three-trial mean 90.3 ±1.2, median 91,
+CI95 [89, 91], 160 of 176 points, 44 min 53 s** `[measured-here]`. The same 88 hardmode scenarios at
+`low` on the same engine score **85.5 ±1.3**, and the NVFP4 sibling recipe scores **87.8 ±0.9**.
+Welch t = 5.53 and 3.25; exact permutation over all 165 splits p = **0.006** and **0.012**.
+[`results/gates/quality-battery-production-13.md`](results/gates/quality-battery-production-13.md).
+
+**Nothing on the cluster changed.** The engine was not restarted and no flag on it moved. A 40-line
+reverse proxy sits between the harness and the API and injects `chat_template_kwargs.reasoning_effort`
+into `/chat/completions` bodies only; the harness points at the proxy. It is a measurement instrument,
+not a deployment — production still serves at `low`, which is what every other quality number in this
+repository is measured at. [`scripts/effort-proxy.py`](scripts/effort-proxy.py).
+
+**It reframes the −2.3 points [docs/11](docs/11-open-issues.md) §2.30 has been carrying.** Three of
+the four scenarios that gap was concentrated in go level or better at high effort — **TC-21 from 0.00
+to a full 2.00** (5/5 validation errors instead of 1/5, on a tool-free reasoning task), TC-87 1.25 →
+2.00, TC-74 1.25 → 1.67. TC-51 moves 0.12 → 0.67 and remains the largest hole, which is what the
+grading rule §2.30 proved from the grader's source predicts. Twelve scenarios up, three down; four
+categories carry all nine points, Safety & Boundaries 21 → **25/26** and Autonomous Planning 2 →
+**4/6**. §2.30 stays open: the sibling has not been run at high effort, so the build and the weights
+are still not separated.
+
+**What it cost.** Completion tokens **+90 %** (19,072 → 36,152 per trial), mean scenario duration
++47 %, median turn latency +24 % (1,968 → 2,440 ms), harness `responsiveness` 65 → **58**. TTFT does
+not move — this is a decode-length cost, not a prefill one. Looked for and not found: malformed calls,
+timeouts, 5xx, empty content, safety warnings; `max_points` is 176 in both files, so no scenario was
+dropped. Three trials rather than eight is the honest limit of the arm, and **TC-38** — 2.00 at `low`
+over eight trials, `[0, 2, 2]` here — is recorded as unresolved rather than as a regression, because
+three trials cannot tell a new failure mode from an unlucky draw.
+
+**The battery started from a whole-cluster reboot into this configuration**, all three nodes at the
+same second, nothing started by hand: SSH back at 103 s, `ibv_devinfo` 4/4 on all three before the
+engine, `/health` 200 at **321 s** against 318 s for the vision configuration. Gates cold: probe
+10/10, code exam 12/12 first try, tool-call 8/8, needle-lite 6/6, vision 5/5. **One deviation, written
+as one:** the KV pool came up at **6,873,278** tokens, **0.60 % below** the documented
+6,914,600–7,143,250 boot-to-boot spread. That spread is a set of observations rather than a
+specification and this boot widens its floor; nothing downstream moved, and the variance behind it is
+still uncharacterised.
+
+---
+
 ## 2026-09-08 (two nodes) — The two-node recipe catches up: the tower, both backports, and a block that is 4,608 tokens wide
 
 **The TP=2 track's recommended configuration is now candidate D**: candidate C plus the **vision

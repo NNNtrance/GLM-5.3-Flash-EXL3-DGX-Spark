@@ -486,6 +486,18 @@ build, which changed together; the next step is a build A/B.
 has the scenario table, the statistics and the template arm; [11](11-open-issues.md) §2.30 keeps it
 open.
 
+**Since 8 September there is a second reading of that row, and it changes what the −2.3 points
+means.** The same engine, unchanged, scores **90.3 ±1.2** on the same 88 scenarios at reasoning
+effort `high` — above the sibling's `low`-effort 87.8 ±0.9, permutation p = 0.012 `[measured-here]`.
+Three of the four scenarios the deficit was concentrated in go level or better, TC-21 from 0.00 to a
+full 2.00. The effort was raised by a proxy that injects `reasoning_effort` into the harness's
+requests, so the server was never restarted or reconfigured and production still serves at `low`.
+Read together, the two rows say the `low`-effort gap was a **thinking-budget** difference on
+planning-shaped scenarios rather than a capability difference in the quantisation or the engine —
+and the build/checkpoint confound of §2.30 is untouched by it and stays open. The price is +90 %
+completion tokens and +24 % median turn latency:
+[`../results/gates/quality-battery-production-13.md`](../results/gates/quality-battery-production-13.md).
+
 ---
 
 ## 4. Roofline

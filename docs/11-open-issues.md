@@ -1569,6 +1569,22 @@ second call must not happen if the first one failed, or wherever a framework gra
 Constrain it in the system prompt or send `parallel_tool_calls: false`; that setting has never been
 measured here `[not tested]`.
 
+**Update, 8 September — a second reading that narrows the item without closing it.** The same engine,
+nothing changed on it, scores **90.3 ±1.2** on the same 88 scenarios at reasoning effort `high`
+(three trials, `final_score` 91, 160/176), which is **above** the sibling's `low`-effort 87.8 ±0.9 —
+Welch t = 3.25, exact permutation p = 0.012 `[measured-here]`. Three of the four scenarios the gap
+was concentrated in move: **TC-21 0.00 → 2.00** (it finds 5/5 validation errors instead of 1/5, on a
+tool-free reasoning task), TC-87 1.25 → 2.00, TC-74 1.25 → 1.67. TC-51 goes 0.12 → 0.67 and stays the
+largest hole, which is consistent with the grading rule above being the cause rather than the
+reasoning. The effort was raised by a proxy that injects `reasoning_effort` into the harness's
+requests, so the server was never restarted or reconfigured
+([`../scripts/effort-proxy.py`](../scripts/effort-proxy.py),
+[`../results/gates/quality-battery-production-13.md`](../results/gates/quality-battery-production-13.md)).
+**What this does and does not do.** It says the `low`-effort deficit is a thinking-budget effect on
+planning-shaped scenarios rather than a capability difference. It does **not** separate the build from
+the weights — the sibling has not been run at `high` effort and cannot be, so the arms are not
+symmetric — and the build A/B above is still the next step. The item stays open.
+
 ### 2.31 The vision tower is in production, and five things about it are not settled
 
 The tower ships ([18](18-vision-at-three-ranks.md), production configuration 13, 7 September 2026):
