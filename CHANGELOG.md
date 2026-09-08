@@ -42,6 +42,16 @@ dropped. Three trials rather than eight is the honest limit of the arm, and **TC
 over eight trials, `[0, 2, 2]` here — is recorded as unresolved rather than as a regression, because
 three trials cannot tell a new failure mode from an unlucky draw.
 
+**The 1M needle, deferred on 6 September, is run: 20/20** `[measured-here]`. Four haystack sizes up
+to **997,952 tokens** by five depths, every cell retrieved, effective context the full largest
+haystack; 1 h 25 min 32 s and 8.27M tokens against the NVFP4 sibling's identical 20/20 in 5,288.6 s —
+**3.0 % quicker**, the same result. Run at the server's own `reasoning_effort: low` with the proxy
+stopped. Thermals across the whole 85 minutes, 141 samples per node: head 83.4 °C mean / 87 peak,
+workers 79.7 / 82.0 mean, SM clocks 2,398 / 2,450 / 2,356 MHz, no node out of band, peak power
+82.4 W, swap traffic zero. Two readings that do not match what this repository has been repeating and
+are left as measured: **the head is hotter than the workers by 3.7 °C, not by the wider margin
+claimed, and it does not hold the lowest clock — worker-2 does.**
+
 **The battery started from a whole-cluster reboot into this configuration**, all three nodes at the
 same second, nothing started by hand: SSH back at 103 s, `ibv_devinfo` 4/4 on all three before the
 engine, `/health` 200 at **321 s** against 318 s for the vision configuration. Gates cold: probe

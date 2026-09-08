@@ -1,4 +1,4 @@
-# The quality battery on the current production configuration — the reboot, and tool-eval-bench at high reasoning effort
+# The quality battery on the current production configuration — the reboot, tool-eval-bench at high reasoning effort, and the two tests that were deferred
 
 **8 September 2026.** This page carries the battery run on the configuration this repository now
 recommends: **production configuration 13** (configuration 12 plus the vision tower) **with both
@@ -9,7 +9,8 @@ is not a benchmark of a configuration.
 
 The previous battery is [`quality-battery-production-12.md`](quality-battery-production-12.md) and it
 is not superseded: it holds GSM8K, IFEval and the eight-trial tool-eval-bench run at effort `low`,
-and the numbers here are read against it.
+and the numbers here are read against it. It also **deferred two tests on time** — the 1M needle and
+the full MMLU — and this page is where they get run.
 
 Settings for every number on this page unless stated otherwise: image `exl3-zeus:754421f`, the
 `tracks/tp3/patches/` tree with the prefix-hit and K-pool-tail patches applied and **both knobs on**,
@@ -272,7 +273,49 @@ between the reboot and the end of this run, and `/health` was 200 either side.
 
 ---
 
-## 8. What this does not settle
+## 8. The needle in a haystack at 1M — 20/20, and the first time this stack has run it
+
+[`quality-battery-production-12.md`](quality-battery-production-12.md) §6 deferred this one on time
+and said so. It is now run, on the configuration above, at the server's own `reasoning_effort: low` —
+the effort proxy was stopped before it started `[measured-here]`.
+
+Same harness, `--needle-only`, seed 42, temperature 0, per-request timeout 3,600 s. Four haystack
+sizes × five depths = 20 needles, the largest haystack **997,952 tokens** — 99.8 % of
+`max_model_len`.
+
+| | **This stack** | NVFP4 sibling, 3 Sep |
+|---|---|---|
+| Retrieval accuracy | **20/20 = 100 %** | 20/20 = 100 % |
+| Effective context | **997,952 tokens** — the largest haystack retrieved at every depth | 997,952 |
+| Grid | 1K / 325K / 650K / 974K × 0 / 25 / 50 / 75 / 100 % depth, **every cell** | every cell |
+| Duration | **5,132.4 s** (1 h 25 min 32 s) | 5,288.6 s |
+| Tokens | 8,265,919 | 8,265,994 |
+
+**Level with the sibling on the result and 3.0 % quicker on the clock.** The token counts differ by
+75 out of 8.27 million, which is answer length, not work. There is nothing to interpret in a 20/20:
+the useful part is that it is the first 1M-scale reading on this configuration — with the vision
+tower loaded and both backports on — and it did not move.
+
+**Thermals and clocks across the whole 85-minute run**, sampled on all three nodes at 30 s, 141
+samples each `[measured-here]`:
+
+| Node | GPU temp mean / peak | SM clock mean / min | Board power mean / peak | `MemAvailable` floor | Swap peak |
+|---|---|---|---|---|---|
+| head (rank 0) | **83.4** / 87 °C | 2,398 / 2,327 MHz | 79.4 / 81.7 W | **2,379 MB** | 2 MB |
+| worker-1 | 79.7 / 83 °C | **2,450** / 2,418 MHz | 78.2 / 80.5 W | 4,884 MB | 0 |
+| worker-2 | 82.0 / 86 °C | 2,356 / 2,320 MHz | 79.7 / 82.4 W | 4,873 MB | 0 |
+
+Two notes, both against expectation and both left as measured. **The head is the hottest node but
+not by the margin this repository has been repeating**: +3.7 °C over worker-1 on the mean, and only
++1.4 °C over worker-2. And **the head does not hold the lowest clock** — worker-2 does, at a 2,356
+MHz mean against the head's 2,398. Whatever separates worker-1 from the other two is worth more than
+the head-versus-rest framing that has been used so far. Peak power stays under 82.5 W on every node
+and no node throttles out of the 2,3xx MHz band. The head's free host memory bottoms at 2.4 GB with
+2 MB of swap in use and no swap traffic, which is the same picture the vision stress produced.
+
+---
+
+## 9. What this does not settle
 
 - **Three trials.** Every per-scenario claim on this page is weaker than the aggregate one. TC-38 in
   particular is unresolved, and TC-51's single pass in three is not a rate.

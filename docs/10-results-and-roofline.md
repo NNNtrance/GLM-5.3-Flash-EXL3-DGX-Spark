@@ -471,7 +471,7 @@ version, same flags, same three nodes, temperature 0, effort `low` `[measured-he
 | IFEval, 541 prompts | prompt **80.0 %**, instruction **86.0 %** | prompt 78.9 %, instruction 85.1 % |
 | tool-eval-bench, hardmode, 88 × 8 trials | **85.5 ±1.3** (`final_score` 86) | **87.8 ±0.9** |
 | MMLU | 86.47 ±0.74 (1,995-question sample, TP=3) | 85.9 ±0.3 (full, 14,042 questions) |
-| needle at 1M | **deferred** — needle-lite 6/6 at 64K/128K, one 969,468-token request correct | 20/20 |
+| needle at 1M | **20/20** (8 September, effective context 997,952 tokens, 1 h 25 min 32 s) | 20/20 (5,288.6 s) |
 
 **The tool-eval line is the one to read properly, and it is not a quality collapse.** The −2.3 points
 is real (permutation p = 0.0048) and it is **four scenarios out of 88** — on the other 84 this stack
@@ -1206,9 +1206,11 @@ argued about (§5.2, [11](11-open-issues.md) §2.5) `[measured-here]`.
 - **MMLU at TP=3** — run since 5 September on the production checkpoint: **86.47 ±0.74** on the 1,995-question sample (§1, §3); the earlier 86.4 ±0.7 figure was a TP=2 reading. The **full** 14,042-question MMLU at TP=3 is still not run (deferred, [results/gates/quality-battery-production-12.md](../results/gates/quality-battery-production-12.md)).
 - ~~**IFEval, GSM8K, tool-eval-bench**~~ **Done on 6–7 September** `[measured-here]` — §3.1 and
   [`../results/gates/quality-battery-production-12.md`](../results/gates/quality-battery-production-12.md).
-  Still missing: **needle-in-a-haystack at 1M** and the **full MMLU**, both staged in that battery and
-  deferred on time before they started, and **ExtractBench Short**, which neither this stack nor the
-  NVFP4 sibling's shipped build has ever run `[not tested]`.
+  **Needle-in-a-haystack at 1M is no longer missing: 20/20 on 8 September**, effective context
+  997,952 tokens, level with the sibling and 3.0 % quicker
+  ([`../results/gates/quality-battery-production-13.md`](../results/gates/quality-battery-production-13.md) §8)
+  `[measured-here]`. Still missing: the **full MMLU** and **ExtractBench Short**, which neither this
+  stack nor the NVFP4 sibling's shipped build has ever run `[not tested]`.
 - **Prefix caching.** With a 3,328-token attention block, our benchmark prompts never fill one, so
   the prefix-cache hit rate is 0 % throughout and the benchmark says nothing about it
   `[measured-here]`.
