@@ -331,3 +331,28 @@ and no node throttles out of the 2,3xx MHz band. The head's free host memory bot
 
 Raw data: the harness JSON and the console log for this run, and the reboot and gate logs, are the
 files this page was written from. The proxy is [`../../scripts/effort-proxy.py`](../../scripts/effort-proxy.py).
+
+
+## 10. The full MMLU — 85.30 ±0.29 on all 14,042 questions
+
+Run 8 September 2026, 07:01–08:48 local, on the same boot as §8: `lm-eval` `local-completions` against
+the production API, loglikelihood scoring (no generation, so no reasoning effort is involved), 0-shot,
+eight concurrent requests, every one of the 14,042 questions `[measured-here]`. Raw results under
+`olcum-betikleri` on the workstation (`lmeval-glm53-exl3-mmlu-tam/`).
+
+| Group | Accuracy |
+|---|---:|
+| **MMLU, all 57 subjects** | **0.8530 ±0.0029** |
+| Humanities | 0.7996 |
+| Social sciences | 0.9119 |
+| STEM | 0.8557 |
+| Other | 0.8729 |
+
+**Against the references.** The NVFP4 sibling recipe's full MMLU was **85.9** (3 September, its t10
+configuration); this stack's 1,995-question sample read **86.47 ±0.74** on production 9 and 12. The full
+run lands 0.6 points under the sibling and inside the sample's own error bar. With ±0.29 on each full
+run the gap is at the edge of significance — same class, not a measured deficit, and not a measured
+parity either. What it closes: the `[not tested]` that the README carried for the full MMLU since
+6 September.
+
+**Wall-clock:** 1 h 47 min for 56,168 loglikelihood requests (four answer choices per question).

@@ -11,6 +11,13 @@ rounds, which is what the persisted MLA tuner cache bought — see
 
 ---
 
+## 8 September 2026 — the full MMLU: 85.30 ±0.29
+
+All 14,042 questions, loglikelihood, 0-shot, on the current production configuration: **0.8530 ±0.0029**
+(humanities 0.80, social sciences 0.91, STEM 0.86, other 0.87). The NVFP4 sibling's full run was 85.9;
+this stack's 1,995-question sample was 86.47 ±0.74. Same class; the last `[not tested]` of the quality
+battery is closed. [`results/gates/quality-battery-production-13.md`](results/gates/quality-battery-production-13.md) §10.
+
 ## 2026-09-08 — What the same engine scores when it is allowed to think: 90.3 against 85.5, and the four scenarios that were the gap
 
 **tool-eval-bench at reasoning effort `high`: `final_score` 91, three-trial mean 90.3 ±1.2, median 91,
