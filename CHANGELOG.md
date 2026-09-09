@@ -27,9 +27,11 @@ for the K-pool tail fix** (`008a730`): the reporter's window predates it, and th
 are the user-visible face of the 99.67 %-wrong-block finding — correlation, not attribution, and
 recorded as such. [HELP-WANTED](HELP-WANTED.md) §14 asks for the multi-turn gate that would have
 caught all of it; [docs/11](docs/11-open-issues.md) §2.30 carries the field corroboration of the
-`low`-effort gap and the operational advice that follows from it. An early-stop A/B (speculative
-decoding on and off, 24 long-form prompts at temperature 1.0) is running and will be added to
-`results/gates/` when it lands.
+`low`-effort gap and the operational advice that follows from it. The early-stop A/B is in: 24 long-form prompts at temperature 1.0 / top_p 0.95, DFlash2 on and
+off, **zero early stops in either arm** (48 requests, all to the 4,096-token cap, coherent at the
+cut); the verifier applies top-k/top-p and temperature before rejection sampling, so the
+"draft-proposed EOS" hypothesis has neither a code path nor a measurement behind it on this build
+([`results/gates/early-stop-ab-10sep.md`](results/gates/early-stop-ab-10sep.md)).
 ---
 
 ## 8 September 2026 — the full MMLU: 85.30 ±0.29
