@@ -77,7 +77,18 @@ case "$SPEC_METHOD" in
           SPEC_ARG=(--speculative-config "{\"method\":\"dflash\",\"model\":\"${DRAFT_PATH}\",\"num_speculative_tokens\":${SPEC_TOKENS},\"kv_cache_dtype\":\"auto\"}") ;;
   *) echo "SPEC_METHOD must be none|mtp|dflash" >&2; exit 2 ;;
 esac
-THINKING_ARG=(); [ -n "${REASONING_EFFORT:-}" ] && THINKING_ARG=(--default-chat-template-kwargs "{\"enable_thinking\":true,\"reasoning_effort\":\"${REASONING_EFFORT}\"}")
+# clear_thinking decides whether every PRIOR turn's <think> block is re-rendered
+# into the prompt. z.ai's template defaults it to false -- RETAIN -- from
+# 04c4e9e9 (27 Aug) onward, 690b7052 included, and the retention fires without a
+# client asking for it: agent clients echo the previous assistant turn back
+# verbatim and the template extracts <think> out of `content` itself, so the
+# block returns even when the request never set reasoning_content. It compounds
+# every turn. CLEAR_THINKING=0 restores the template default.
+# Protects only requests that send NO chat_template_kwargs of their own: a
+# per-request block REPLACES these defaults rather than merging, so a gateway
+# must send the key on every variant. docs/14.
+if [ "${CLEAR_THINKING:-1}" = "1" ]; then _CT=true; else _CT=false; fi
+THINKING_ARG=(); [ -n "${REASONING_EFFORT:-}" ] && THINKING_ARG=(--default-chat-template-kwargs "{\"enable_thinking\":true,\"clear_thinking\":${_CT},\"reasoning_effort\":\"${REASONING_EFFORT}\"}")
 [ "${ENABLE_EP:-1}" = "1" ] || { echo "TP=3 requires ENABLE_EP=1 (EXL3 trellis cannot be sliced by 3)" >&2; exit 2; }
 EP_ARG=(--enable-expert-parallel)
 EAGER_ARG=(); [ "${ENFORCE_EAGER:-0}" = "1" ] && EAGER_ARG=(--enforce-eager)
