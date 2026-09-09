@@ -1547,12 +1547,74 @@ Related: a synthetic counting prompt runs at roughly **1.7×** the realistic sin
 **Publishing a synthetic number without the label is the single easiest way to mislead someone about
 this hardware.**
 
-### 9.11 The chat template's provenance is unverified
+### 9.11 The chat template's provenance is unverified — **closed 10 September 2026**
 
 **Track:** both — chat template provenance, at checkpoint level.
 
-The served `chat_template.jinja` matches **neither** checkpoint on disk, and has never been verified
-against a named source. **Open** — the only provenance claim in the retraction audit still open.
+The served `chat_template.jinja` matches neither checkpoint on disk because it is neither
+checkpoint's file: it is the **4 September 2026 revision of `zai-org/GLM-5.3-Flash`'s own
+template**, 10,950 bytes, SHA-256 `0c4099f3…`, verified on the production node on 10 September.
+The verification is by size and hash alone, and it is sufficient because of a finding we owe to
+jdecker76 (issue #1): across the whole revision history of `zai-org/GLM-5.3-Flash`, the 62
+safetensors, `config.json`, `generation_config.json`, `tokenizer.json`, `tokenizer_config.json` and
+the weight index have **never changed**; the only content that has ever moved is
+`chat_template.jinja`. Provenance therefore reduces to one table:
+
+| Upstream revision | Size | SHA-256 (prefix) | `clear_thinking` default | Who ships it |
+|---|---:|---|---|---|
+| 26 Aug 2026 | 8,617 B | `41cff9af` | **clears** prior-turn reasoning | `turboderp/GLM-5.3-Flash-exl3` — snapshotted before the change |
+| 27 Aug 2026 | 10,644 B | `34d5ee66` | **retains** it | `local-inference-lab/GLM-5.3-Flash-NVFP4`, the NVFP4 sibling |
+| 4 Sep 2026, current | 10,950 B | `0c4099f3` | **retains** it | **this stack, both tracks** |
+
+The 27 August revision flipped the default (line 4: `{%- set clear_thinking = clear_thinking if
+clear_thinking is defined else false -%}`); that flip is the mechanism of §9.12. The 4 September
+file is kept — it fixes the tool-call rendering defects recorded in [docs/11](11-open-issues.md)
+§2.30, and jdecker76 independently reproduced that the 27 August file still renders a literal
+`None` before a null-content tool call while the 4 September file does not — and the launcher now
+guards the default instead (§9.12). **Closed.**
+
+### 9.12 Prior turns' reasoning is re-rendered into every later prompt unless `clear_thinking` is sent **[SILENT]**
+
+**Track:** both — a chat-template default; it affects any multi-turn client that echoes
+`<think>…</think>` back inside `content`, which is what most agent frameworks do.
+
+**Symptom.** Multi-turn sessions grow far faster than their visible text, and long agentic sessions
+drift into repetition: what the model reasoned at turn N is fed back to it at turns N+1…, so one
+degenerate turn primes the next. No single-turn gate can see it, and every gate in this repository
+is single-turn. Reported from production by jdecker76 (issue #1) after four days of multi-user
+agentic traffic on production configuration 13.
+
+**Mechanism.** The served template (§9.11) defaults `clear_thinking` to `false`. When a client sends
+the previous assistant turn back with its `<think>…</think>` block still inside `content`, template
+lines 150–152 split the block out as `reasoning_content` and the retention branch renders it into
+the prompt again. The `reasoning_content` **field** on an input message is dropped by vLLM before
+the template sees it, so that path never fires; the inline path does.
+
+**Measured on this stack** `[measured-here]`, 10 September, `/tokenize` on the production engine, a
+three-message conversation whose one prior assistant turn carries about 900 tokens of reasoning:
+
+| The prior assistant turn carries | default | `clear_thinking: true` |
+|---|---:|---:|
+| nothing | 30 | 30 |
+| `<think>…</think>` inline in `content` | **1,771** | 30 |
+| the same text in a `reasoning_content` field | 30 | 30 |
+
+One prior reasoning turn is 59× the prompt, and it compounds with every turn.
+
+**Fix, and it is in both launchers.** [`scripts/start-tp3.sh`](../scripts/start-tp3.sh) and
+[`scripts/start-tp2full.sh`](../scripts/start-tp2full.sh) now always pass
+`--default-chat-template-kwargs '{"clear_thinking":true, …}'`, with `reasoning_effort` appended when
+`REASONING_EFFORT` is set. `enable_thinking`, which the launchers used to send, is not read by this
+template at all and is no longer sent. With `clear_thinking: true` the template still renders the
+reasoning of turns *after the last user message*, so a tool-call loop inside one turn keeps its own
+reasoning; only earlier turns are cleared, which is the upstream API's behaviour.
+
+**Two cautions.** On this build (vLLM `487ecf187`) a per-request `chat_template_kwargs` is **merged
+over** the server default — `{"reasoning_effort":"high"}` alone keeps `clear_thinking: true` —
+but jdecker76 measured the opposite (replacement) on their build, so a gateway that sends its own
+`chat_template_kwargs` should carry `"clear_thinking": true` itself;
+[`scripts/effort-proxy.py`](../scripts/effort-proxy.py) now does. And nothing measured in this
+repository moves: every benchmark here is single-turn, where the flag is a no-op.
 
 ---
 

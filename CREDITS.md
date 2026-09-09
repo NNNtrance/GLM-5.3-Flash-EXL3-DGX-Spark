@@ -594,3 +594,15 @@ Two of them are not ours to keep:
   offered upstream and **not** in that PR branch, because our own measurement says it changes nothing
   on this hardware. It is kept, with the measurement that rejected it, rather than deleted
   ([docs/06](docs/06-nccl-mesh.md) §10).
+
+## Field reports
+
+### jdecker76 — issue #1, the first production report
+
+Four days of multi-user agentic traffic on production configuration 13, side by side with the NVFP4
+sibling on the same cluster; a root cause this repository had missed (the template's
+`clear_thinking` default and the launcher that did not guard it); the provenance finding that closed
+[docs/14](docs/14-troubleshooting.md) §9.11 (only `chat_template.jinja` has ever changed in
+`zai-org/GLM-5.3-Flash`); the field evidence for the K-pool tail fix; and the design of the
+multi-turn gate in [HELP-WANTED](HELP-WANTED.md) §14. Corrected their own report in public when a
+measurement disagreed with it, which is the standard this repository tries to hold itself to.

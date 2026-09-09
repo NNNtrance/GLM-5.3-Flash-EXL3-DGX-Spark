@@ -620,6 +620,27 @@ but time.
 
 ---
 
+## 14. A multi-turn gate: twenty warm turns at temperature 1.0, with two assertions
+
+**Effort: an afternoon of harness work, then about twenty minutes per run. Needs one engine of either track.**
+
+Every gate in this repository is single-turn at temperature 0. The three symptoms a production user
+reported after four days of real traffic (issue #1: looping, premature end-of-turn, a long-session
+quality drop) live only in long, warm, multi-turn sessions at sampling temperature. A stack can pass
+every gate here and still be rolled back by its users, and that is exactly what happened. Two of the
+three mechanisms are now understood ([docs/14](docs/14-troubleshooting.md) §9.12, and the K-pool tail
+fix in [`tracks/tp3/patches/prefix-hit-and-kpool-tail/`](tracks/tp3/patches/prefix-hit-and-kpool-tail/README.md));
+the gate that would have caught them does not exist yet.
+
+What we would like: a replay of a 20-turn agentic transcript — tool calls, reasoning turns, the
+client echoing each assistant message back verbatim, as real clients do — against a warm prefix
+cache at temperature 1.0 / top_p 0.95, with two assertions: (a) `prompt_tokens` per turn grows by no
+more than the visible text added, which catches retention under any template; (b) the distribution
+of `finish_reason` and completion length across the run has no cluster of `stop` below half the
+expected length, which catches spurious early stops. The same transcript with speculative decoding
+off is the natural control. The design is jdecker76's (issue #1 §4), who has offered prompt material;
+the tokenizer-side check for (a) is in docs/14 §9.12 and takes one `/tokenize` call.
+
 ## What we would rather you did not send
 
 Repeated from `CONTRIBUTING.md` because it is the shortest way to save your afternoon:

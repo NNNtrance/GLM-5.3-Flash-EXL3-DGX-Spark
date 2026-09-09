@@ -1585,6 +1585,19 @@ planning-shaped scenarios rather than a capability difference. It does **not** s
 the weights — the sibling has not been run at `high` effort and cannot be, so the arms are not
 symmetric — and the build A/B above is still the next step. The item stays open.
 
+**Field corroboration, 8–9 September (issue #1).** A production deployment of this recipe — ten
+users, four days, real agentic coding traffic at `reasoning_effort: low`, temperature 1.0 — reached
+the same conclusion in the same direction without knowing this benchmark existed: a consistent user
+preference for the NVFP4 sibling on identical work, severe enough to trigger a rollback. That window
+predates the K-pool tail fix
+([`../tracks/tp3/patches/prefix-hit-and-kpool-tail/`](../tracks/tp3/patches/prefix-hit-and-kpool-tail/README.md))
+and ran with the reasoning-retention default of [docs/14](14-troubleshooting.md) §9.12, so it does
+not isolate the effort effect; it does say the `low`-effort gap is not academic. The operational
+advice follows from the `high` measurement above: **for agentic traffic make `high` the default and
+reserve `low` for cost-sensitive, short-horizon clients**, with the price stated next to it — about
++90 % completion tokens and +24 % turn latency on the same scenarios. The build A/B remains the next
+step; jdecker76 has offered a same-cluster NVFP4 control arm, which would be the first symmetric one.
+
 ### 2.31 The vision tower is in production, and five things about it are not settled
 
 The tower ships ([18](18-vision-at-three-ranks.md), production configuration 13, 7 September 2026):

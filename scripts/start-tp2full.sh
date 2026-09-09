@@ -66,7 +66,10 @@ case "$SPEC_METHOD" in
           SPEC_ARG=(--speculative-config "{\"method\":\"dflash\",\"model\":\"${DRAFT_PATH}\",\"num_speculative_tokens\":${SPEC_TOKENS},\"kv_cache_dtype\":\"auto\"}") ;;
   *) echo "SPEC_METHOD must be none|mtp|dflash" >&2; exit 2 ;;
 esac
-THINKING_ARG=(); [ -n "${REASONING_EFFORT:-}" ] && THINKING_ARG=(--default-chat-template-kwargs "{\"enable_thinking\":true,\"reasoning_effort\":\"${REASONING_EFFORT}\"}")
+# clear_thinking:true — prior turns' <think> blocks are NOT re-rendered into later prompts. The upstream template
+# defaults to retaining them since its 27 Aug 2026 revision (docs/14 §9.12). enable_thinking is not read by the
+# template and is no longer sent. reasoning_effort is appended when REASONING_EFFORT is set.
+THINKING_ARG=(--default-chat-template-kwargs "{\"clear_thinking\":true${REASONING_EFFORT:+,\"reasoning_effort\":\"${REASONING_EFFORT}\"}}")
 PROF_ARG=()
 if [ -n "${PROFILER_DIR:-}" ]; then
   PROF_ARG=(--profiler-config "{\"profiler\":\"torch\",\"torch_profiler_dir\":\"${PROFILER_DIR}\",\"torch_profiler_with_stack\":false,\"ignore_frontend\":true}")

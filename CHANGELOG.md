@@ -11,6 +11,27 @@ rounds, which is what the persisted MLA tuner cache bought — see
 
 ---
 
+## 10 September 2026 — issue #1: the reasoning-retention default, the template's provenance, and a field report on the K-pool fix
+
+A production user (jdecker76, issue #1) ran production configuration 13 for four days of multi-user
+agentic traffic and reported looping, premature end-of-turn and a long-session quality drop that
+none of this repository's single-turn gates can see. Three things follow. **Both launchers now pass
+`clear_thinking: true`**: the served template, the 4 September upstream file, defaults to
+re-rendering every prior turn's `<think>` block into every later prompt, which on this engine turns
+a 30-token three-message conversation into 1,771 tokens per prior reasoning turn `[measured-here]`
+([docs/14](docs/14-troubleshooting.md) §9.12). **docs/14 §9.11 is closed**: the served template is
+verified by size and hash as the 4 September revision of `zai-org/GLM-5.3-Flash`, whose template is
+the only file in that repository that has ever changed; the `clear_thinking` default flipped between
+the 26 and 27 August revisions, and turboderp's checkpoint ships the earlier one. **Field evidence
+for the K-pool tail fix** (`008a730`): the reporter's window predates it, and their three symptoms
+are the user-visible face of the 99.67 %-wrong-block finding — correlation, not attribution, and
+recorded as such. [HELP-WANTED](HELP-WANTED.md) §14 asks for the multi-turn gate that would have
+caught all of it; [docs/11](docs/11-open-issues.md) §2.30 carries the field corroboration of the
+`low`-effort gap and the operational advice that follows from it. An early-stop A/B (speculative
+decoding on and off, 24 long-form prompts at temperature 1.0) is running and will be added to
+`results/gates/` when it lands.
+---
+
 ## 8 September 2026 — the full MMLU: 85.30 ±0.29
 
 All 14,042 questions, loglikelihood, 0-shot, on the current production configuration: **0.8530 ±0.0029**

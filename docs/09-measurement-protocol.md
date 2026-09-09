@@ -337,6 +337,13 @@ What max effort would change is an `[estimate]` wherever we make one, and it is 
 There is no way to turn thinking off on this model. `enable_thinking: false` does not do what its
 name suggests here; the effort levels are the control surface.
 
+Two template facts learned from the field on 10 September 2026 ([docs/14](14-troubleshooting.md)
+§9.11–9.12): `enable_thinking` is not read by this template at all — the launchers sent it out of
+habit and no longer do — and `clear_thinking` **is** read, defaulting to *retain* prior turns'
+reasoning in the 27 August and later upstream templates. Both launchers now default it to `true`.
+Nothing in this repository changes: every measurement here is single-turn, where the flag is a
+no-op. Any multi-turn measurement must state which way it was set.
+
 ---
 
 ## 8. What a complete measurement report looks like

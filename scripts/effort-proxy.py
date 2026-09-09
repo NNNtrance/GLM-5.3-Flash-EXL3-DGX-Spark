@@ -44,6 +44,7 @@ async def forward(req: web.Request):
             payload = json.loads(body)
             kwargs = dict(payload.get("chat_template_kwargs") or {})
             kwargs["reasoning_effort"] = EFFORT
+            kwargs.setdefault("clear_thinking", True)  # docs/14 §9.12: a gateway that sends its own kwargs must carry this itself
             payload["chat_template_kwargs"] = kwargs
             body = json.dumps(payload).encode()
             headers["Content-Type"] = "application/json"
