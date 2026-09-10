@@ -1,0 +1,4 @@
+radius=114px
+content : This is the flag of Japan, featuring a large red circle centered on a white background.
+colour=True shape=True
+VISION: PASS

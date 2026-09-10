@@ -9,7 +9,7 @@
 #   4. sync + drop_caches
 #   5. the env file exists
 #   6. the image named in it is present locally
-#   7. this rank's fast-load sidecar has its MANIFEST.json
+#   7. this rank's fast-load sidecar has its MANIFEST.json -- ONLY in load mode
 #
 # Why 2 and 3 exist: at boot the engine starts long before the fabric is ready.
 # Without them the NCCL rendezvous hangs with no useful error and the unit sits
@@ -81,8 +81,17 @@ test -f "$ENVF" || { echo "no env file: $ENVF"; exit 1; }
 IMG=$(grep -E "^IMAGE=" "$ENVF" | cut -d= -f2)
 docker image inspect "$IMG" >/dev/null 2>&1 || { echo "image not present: $IMG"; exit 1; }
 
+# Check 7 is MODE-AWARE, and it cost 18 minutes of downtime to make it so
+# (docs/14 section 10.6). A missing sidecar is fatal only in FASTLOAD_MODE=load.
+# In dump mode the launcher creates the directory itself, so demanding the
+# MANIFEST there means a NEW FASTLOAD_DIR can never be booted: the mode whose job
+# is to create the directory requires the directory to already exist. With the
+# mode empty, fast loading is not in play at all. The gate is narrowed, not
+# removed -- in load mode a missing or half-written sidecar is still a boot this
+# script should stop here rather than four minutes later.
 FD=$(grep -E "^FASTLOAD_DIR=" "$ENVF" | cut -d= -f2)
 R=$(grep -E "^NODE_RANK=" "$ENVF" | cut -d= -f2)
-[ -z "$FD" ] || test -f "$FD-r$R/MANIFEST.json" || { echo "fast-load sidecar missing: $FD-r$R"; exit 1; }
+FM=$(grep -E "^FASTLOAD_MODE=" "$ENVF" | cut -d= -f2)
+[ -z "$FD" ] || [ "$FM" != load ] || test -f "$FD-r$R/MANIFEST.json" || { echo "fast-load sidecar missing: $FD-r$R"; exit 1; }
 
-echo "exl3 preflight ok: env=$ENVF image=$IMG sidecar=$FD-r$R"
+echo "exl3 preflight ok: env=$ENVF image=$IMG sidecar=$FD-r$R mode=${FM:-none}"

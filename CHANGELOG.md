@@ -11,6 +11,64 @@ rounds, which is what the persisted MLA tuner cache bought — see
 
 ---
 
+## 10 September 2026 — FlashKDA for KDA chunked prefill: +6.5 % of prefill, and 18 minutes paid to one of our own gates
+
+**The fused `vllm._flashkda_C` kernel now runs GLM-5.3-Flash's KDA chunked prefill** instead of the
+ten-kernel Triton `chunk_kda_with_fused_gate` chain — a port of vLLM
+[#55737](https://github.com/vllm-project/vllm/pull/55737) (JaredforReal) onto our pinned tree, five
+anchors in one file, behind `HAREM_KDA_FLASHKDA=1` and default off.
+[`tracks/tp3/patches/flashkda/`](tracks/tp3/patches/flashkda/README.md),
+[`results/gates/flashkda-ab-10sep.md`](results/gates/flashkda-ab-10sep.md).
+
+**Two matched sidecar-less boots, one environment variable apart** `[measured-here]`: sustained prefill
+**1,753.5 / 1,754.0 → 1,867.4 / 1,868.8 tok/s**, **+6.50 % and +6.55 %** on the two repeats, with
+prefix-cache hits counted at **0** in every window of both arms; TTFT on a fresh 7K prompt
+**4.192 → 3.978 s** (−5.1 %, the five samples do not overlap); decode **+0.21 %** and KV pool
+**+0.31 %**, both inside their bands. Gates cold on the candidate: probe 10/10, code exam **12/12**
+first run, needle-lite 6/6, vision PASS. Confirmed afterwards on the production fast-load path at
+**1,865.7** and **1,866.6** tok/s, which is the thing a sidecar-less A/B cannot tell you.
+
+**The estimate was wrong in our favour and that is on the record, not in a footnote.** A rank-0 prefill
+trace puts the replaced kernels at **292.34 ms = 6.19 %** of GPU-busy time with prefill 98.5 %
+GPU-bound, and the micro-benchmark at the production shape — strided q/k/v, so the three
+`.contiguous()` copies are charged to FlashKDA — puts the kernel at **2.55×**. Together that predicted
+**+3.5 … +4.1 %**. Measured **+6.5 %**, about 1.6× the prediction, and **nothing in hand explains the
+rest**: [docs/11](docs/11-open-issues.md) §2.35 carries it open with the things that were looked for
+and are not there (zero cache hits, identical bytes, the backend named in all three ranks' logs, and
+the faster arm holding the *lower* mean SM clock).
+
+**The decode number a single arm would have published is a phantom.** Against the previous night's
+sidecar-on baseline of 58.53 tok/s the candidate's 61.28 looks like +4.7 %. The matched control reads
+**61.15**. The whole difference is the sidecar-less boot, and FlashKDA does not touch the decode path —
+[docs/09](docs/09-measurement-protocol.md) §2 in one paragraph.
+
+**Two operational findings, and the second cost an outage.** Registering one new `patch-*.py`
+invalidates every fast-load sidecar, so there is **no "registered but switched off" state** and a
+symmetric A/B has to run sidecar-less in both arms. And the unit's `ExecStartPre` demanded
+`MANIFEST.json` **regardless of `FASTLOAD_MODE`**, so pointing `FASTLOAD_DIR` at a new directory could
+never boot — the mode whose job is to create the directory required it to exist. All three units went
+to `failed` and the engine was down **17 min 50 s**. The gate is now mode-aware, narrowed rather than
+removed, in both tracks' preflight scripts; [docs/14](docs/14-troubleshooting.md) §10.6 is the entry and
+carries the four-step plan for the next patch A/B.
+
+**What it cost:** one 394 s dump boot, a fresh **53 GiB per rank** sidecar into
+`/var/tmp/glm53-exl3-flashkda` with the previous one kept untouched as the rollback (546 G → 493 G free
+per node), **61.45 MiB per rank** of workspace shared by all 34 KDA layers, and the 18 minutes. Speed,
+quality and memory were all looked for and the only movement is the prefill gain. **One anomaly
+printed rather than smoothed:** the final production boot's KV pool is **7,030,303**, the low reading of
+a five-boot session whose spread is 1.06 % with nothing changed — read as allocator variance at 0.88,
+because the FlashKDA arm read *higher* than the control, and **not re-booted for a better number**.
+
+**A revision we had wrong, corrected before publication.** An internal note recorded this image's
+FlashKDA as tag `3b225bf`; it is **`b5d11010`** (28 July 2026), the tag the pinned vLLM's
+`cmake/external_projects/flashkda.cmake` names, and the proof is that our `_flashkda_C::fwd` takes 14
+arguments with no `checkpoint_state` tail — parameters FlashKDA gained on 6 August. So every number
+here is measured on a **July** kernel, seven commits behind what #55737 was validated against.
+
+**Not measured: two nodes.** [HELP-WANTED](HELP-WANTED.md) §15.
+
+---
+
 ## 10 September 2026 — issue #1: the reasoning-retention default, the template's provenance, and a field report on the K-pool fix
 
 A production user (jdecker76, issue #1) ran production configuration 13 for four days of multi-user

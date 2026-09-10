@@ -1,0 +1,16 @@
+  PASS  arith-1      391
+  PASS  arith-2      1024
+  PASS  arith-3      12
+  PASS  fact-1       Tokyo
+  PASS  fact-2       Au
+  PASS  fact-3       William Shakespeare
+  PASS  code-1       ```python def rev(s):     return s[::-1] ```
+  PASS  code-2       ```python print(sum(range(1, 101))) ```
+  PASS  logic-1      Carol
+  --- long text (repetition-lock check) ---
+  PASS  long-text    173 words, variety 60%
+  first 150 chars: A hash table is a data structure that stores key-value pairs by using a hash function to convert each key into an integer, which is then mapped to an
+
+  RESULT (model knowledge, both fields): 10/10
+  RESULT (content only, what a client sees): 9/9
+  requests with EMPTY content: 0

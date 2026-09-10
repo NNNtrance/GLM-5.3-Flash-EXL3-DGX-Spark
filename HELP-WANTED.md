@@ -641,6 +641,61 @@ expected length, which catches spurious early stops. The same transcript with sp
 off is the natural control. The design is jdecker76's (issue #1 §4), who has offered prompt material;
 the tokenizer-side check for (a) is in docs/14 §9.12 and takes one `/tokenize` call.
 
+## 15. FlashKDA's prefill gain at **two** ranks
+
+**Effort: one dump boot and two measured boots, about two hours. Needs two DGX Spark nodes.**
+
+The fused KDA prefill kernel is in the three-node recipe since 10 September 2026 and is worth
+**+6.5 %** of sustained prefill there, with TTFT at 7K down 5.1 %
+([`results/gates/flashkda-ab-10sep.md`](results/gates/flashkda-ab-10sep.md)). **We have not measured it
+at two ranks at all** `[not tested]`, and the patch is not registered in the TP=2 prelude.
+
+Nothing in it is rank-dependent: the patch edits one file, `vllm/models/glm5next/nvidia/kda.py`, and
+reads no rank count. What *does* change is the arithmetic that decides the size of the gain, and it
+moves in two directions at once:
+
+- **More KDA heads per rank.** 22 at TP=3 — the 64 → 66 pad divided by three, of which rank 2 holds 20
+  real heads — against **32** at TP=2, where 64 divides and nothing is padded. Each rank therefore does
+  about half again as much KDA work per prefill step, so the absolute saving per rank is larger. Our
+  micro-benchmark is a 22-head measurement; re-run
+  [`bench_prodshape.py`](tracks/tp3/patches/flashkda/bench_prodshape.py) with `--heads 32` before
+  predicting anything.
+- **A different denominator.** The gain is `share × (1 − 1/ratio)`, and the share is small here
+  precisely because the EXL3 MoE trellis GEMMs dominate our prefill. At two ranks the experts are
+  tensor-sliced differently, expert parallelism is off, the collectives are one peer pair rather than a
+  ring of three, and fresh prefill is **1,413** tok/s rather than 1,744 — so the KDA fraction of a
+  two-rank prefill step is a number nobody has. **Do not copy our 6.19 %.**
+
+**What we would want reported**, and the A/B design is the part worth copying rather than the numbers:
+
+1. Both arms booted with `FASTLOAD_MODE=` **empty**, the patch registered in both, and
+   `HAREM_KDA_FLASHKDA=1` against `=0` as the only difference. Registering the patch invalidates the
+   sidecar, so there is no way to run a symmetric A/B on the fast-load path
+   ([docs/14](docs/14-troubleshooting.md) §10.6).
+2. `[HAREM-FLASHKDA] kda_prefill_backend=…` from **both** ranks in **both** arms, quoted. Without it
+   there is no evidence which kernel ran, and a missing `--in-place` is a silent no-op.
+3. Sustained prefill with [`loadgen.py`](tracks/tp3/patches/flashkda/loadgen.py), two runs per arm,
+   **with the prefix-cache hit count from the same window**. A prefill number without its cache
+   counters is not usable here.
+4. TTFT on a fresh ~7K prompt, five samples, all five printed. Single-stream decode as the control that
+   should *not* move — and if it does, say whether your two boots differ in anything but the flag.
+5. The gates cold on the candidate arm, and the KV pool from both boots.
+6. The kernel-only ratio at your own head count from `bench_prodshape.py`, one arm per process (two
+   arms in one process beside a serving engine produced a 3.5× artefact on ours).
+
+**And the question behind the item.** Our measured gain is **1.6× the kernel share that predicts it**
+and we cannot account for the difference ([docs/11](docs/11-open-issues.md) §2.35). A second topology
+is the cheapest evidence there is about whether that excess is a property of this stack's overlap
+behaviour or of our arithmetic: if two ranks also come in well above their own prediction, the gap is
+systematic and the prediction method is what is wrong.
+
+**Two nodes are not the only gap.** Nobody has run this on a newer FlashKDA either — ours is the
+**July** kernel (`b5d11010`), seven commits behind what the pull request was validated against,
+including a TMA proxy-fence fix. A build against `3b225bf` or later, at any rank count, is worth
+reporting on its own.
+
+---
+
 ## What we would rather you did not send
 
 Repeated from `CONTRIBUTING.md` because it is the shortest way to save your afternoon:

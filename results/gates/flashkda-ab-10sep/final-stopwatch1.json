@@ -1,0 +1,21 @@
+{
+  "tag": "FINAL-sw1",
+  "mode": "stopwatch",
+  "conc": 24,
+  "settle_s": 20.0,
+  "window_s": 60.011,
+  "prefill_tok_per_s": 1865.7,
+  "decode_tok_per_s_during": 2.0,
+  "prompt_tokens_in_window": 111962,
+  "prefix_cache_queries_in_window": 111811,
+  "prefix_cache_hits_in_window": 0,
+  "requests_ok": 43,
+  "requests_err": 0,
+  "errors": [],
+  "prompt_tokens_mean": 7008.0,
+  "prompt_tokens_min": 6919,
+  "prompt_tokens_max": 7113,
+  "running_at_window_open": 3.0,
+  "waiting_at_window_open": 21.0,
+  "utc": "2026-09-10T03:51:09Z"
+}

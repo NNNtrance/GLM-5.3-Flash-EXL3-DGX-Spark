@@ -18,7 +18,7 @@
 #   4. sync + drop_caches
 #   5. the env file exists
 #   6. the image named in it is present locally
-#   7. this rank's fast-load sidecar has its MANIFEST.json
+#   7. this rank's fast-load sidecar has its MANIFEST.json -- ONLY in load mode
 #
 # The addresses below follow the example range in docs/00 section 4.5 -- they
 # are NOT ours and you must substitute your own. Set FABRIC_PEERS in the
@@ -68,8 +68,15 @@ test -f "$ENVF" || { echo "no env file: $ENVF"; exit 1; }
 IMG=$(grep -E "^IMAGE=" "$ENVF" | cut -d= -f2)
 docker image inspect "$IMG" >/dev/null 2>&1 || { echo "image not present: $IMG"; exit 1; }
 
+# Check 7 is MODE-AWARE. The three-node file carries the same clause and the
+# same reason, and there it cost 18 minutes of downtime (docs/14 section 10.6):
+# a missing sidecar is fatal only in FASTLOAD_MODE=load, because dump mode is
+# what CREATES the directory and demanding the MANIFEST there makes a new
+# FASTLOAD_DIR unbootable. `[not tested]` at two ranks -- the same one-line edit
+# for the same reason, carried so the two files do not diverge.
 FD=$(grep -E "^FASTLOAD_DIR=" "$ENVF" | cut -d= -f2)
 R=$(grep -E "^NODE_RANK=" "$ENVF" | cut -d= -f2)
-[ -z "$FD" ] || test -f "$FD-r$R/MANIFEST.json" || { echo "fast-load sidecar missing: $FD-r$R"; exit 1; }
+FM=$(grep -E "^FASTLOAD_MODE=" "$ENVF" | cut -d= -f2)
+[ -z "$FD" ] || [ "$FM" != load ] || test -f "$FD-r$R/MANIFEST.json" || { echo "fast-load sidecar missing: $FD-r$R"; exit 1; }
 
-echo "exl3 tp2 preflight ok: env=$ENVF image=$IMG sidecar=$FD-r$R"
+echo "exl3 tp2 preflight ok: env=$ENVF image=$IMG sidecar=$FD-r$R mode=${FM:-none}"

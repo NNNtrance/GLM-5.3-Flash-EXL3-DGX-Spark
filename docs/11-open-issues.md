@@ -1758,6 +1758,46 @@ The model's answers were identical and correct in all 24 uncached repeats, so no
 output quality. Instrument: `cached-equality.py --order passes` in
 [`tracks/tp3/patches/prefix-hit-and-kpool-tail/`](../tracks/tp3/patches/prefix-hit-and-kpool-tail/README.md).
 
+### 2.35 FlashKDA's prefill gain is 1.6× the kernel share that predicts it, and nothing in hand explains the rest
+
+**OPEN, measured 10 September 2026.** The gain is real; the size of it is not accounted for.
+
+Both inputs to the prediction were measured before the engine was touched `[measured-here]`. A
+rank-0 prefill trace of the same TP=3 stack puts the kernels FlashKDA replaces at **292.34 ms =
+6.19 %** of GPU-busy time, with prefill **98.5 % GPU-bound**, so a GPU-time saving passes to the wall
+about 1:1. A micro-benchmark at the production shape — 22 heads per rank, 2,048 tokens, q/k/v as
+strided views so FlashKDA pays for its three `.contiguous()` copies — puts the fused kernel at
+**2.55×** the Triton chain. Together: **+3.5 … +4.1 %** of end-to-end prefill speed `[estimate]`.
+
+Measured end to end, two matched sidecar-less arms one environment variable apart, two stopwatch runs
+each: **+6.50 %** and **+6.55 %** `[measured-here]`. Roughly **1.6×** the prediction, and the
+prediction's two inputs are both measurements rather than catalogue figures.
+
+**What the prediction counted, and what it did not.** It counted the kernel substitution and nothing
+else. The fused path also stops allocating several fp32 fill buffers (14.22 ms of the trace in their
+own right) and asks less of the shared workspace arena that the 34 KDA layers pass between them,
+which could overlap better with the EXL3 MoE GEMMs that dominate this prefill — 23.4 % and 11.9 % of
+GPU-busy time for two kernels. **That is a hypothesis and it is not an explanation**: nobody has
+measured it, and this stack's own rule is that an unmeasured mechanism does not get to close a gap.
+A second candidate, the `.contiguous()` copies being cheaper in the engine's allocator state than in
+the bench, would move the estimate in the right direction by a point at most.
+
+**Why it is open rather than filed away as a pleasant surprise.** A gain we cannot account for is a
+gain we cannot predict on another machine, and it is also the shape a measurement error takes. The
+things that would usually produce a too-large delta were looked for and are not there: the
+prefix-cache counters read **0 hits** in every window of both arms, both arms ran the same bytes with
+only the knob differing, the backend each arm used is in all three ranks' logs, the two arms are
+thermally indistinguishable and the faster arm held the *lower* mean SM clock, and the control's four
+readings across two sessions sit inside 0.3 % of each other.
+
+**What would settle it.** A profiler run on the FlashKDA arm — the same rank-0 prefill trace, same
+method — and a subtraction against the 5 September trace class by class. That is one engine window
+with the profiler on, and it would say whether the extra 2.5 points are in the KDA kernels, in the
+MoE GEMMs, or in gaps that moved. Until then the adoption stands on the end-to-end measurement and
+the estimate is on record as having been wrong in our favour.
+[`../results/gates/flashkda-ab-10sep.md`](../results/gates/flashkda-ab-10sep.md) §5,
+[`../tracks/tp3/patches/flashkda/`](../tracks/tp3/patches/flashkda/README.md).
+
 ## 3. Never run
 
 | What | Why not |

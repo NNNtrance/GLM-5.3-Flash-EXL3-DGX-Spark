@@ -1,0 +1,21 @@
+{
+  "tag": "OFF-sw1",
+  "mode": "stopwatch",
+  "conc": 24,
+  "settle_s": 20.0,
+  "window_s": 60.013,
+  "prefill_tok_per_s": 1753.5,
+  "decode_tok_per_s_during": 1.9,
+  "prompt_tokens_in_window": 105231,
+  "prefix_cache_queries_in_window": 105236,
+  "prefix_cache_hits_in_window": 0,
+  "requests_ok": 42,
+  "requests_err": 0,
+  "errors": [],
+  "prompt_tokens_mean": 7015.8,
+  "prompt_tokens_min": 6901,
+  "prompt_tokens_max": 7089,
+  "running_at_window_open": 2.0,
+  "waiting_at_window_open": 21.0,
+  "utc": "2026-09-10T03:21:58Z"
+}

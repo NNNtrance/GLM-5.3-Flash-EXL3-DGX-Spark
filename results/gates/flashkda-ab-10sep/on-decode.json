@@ -1,0 +1,16 @@
+{
+  "tag": "ON-dec",
+  "mode": "decode",
+  "reps": 1,
+  "max_tokens": 512,
+  "runs": [
+    {
+      "wall_s": 8.355,
+      "completion_tokens": 512,
+      "prompt_tokens": 63,
+      "tok_per_s": 61.28
+    }
+  ],
+  "tok_per_s_median": 61.28,
+  "utc": "2026-09-10T03:12:33Z"
+}

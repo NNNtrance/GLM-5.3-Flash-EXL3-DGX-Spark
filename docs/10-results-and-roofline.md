@@ -141,6 +141,24 @@ why the prose row is what it is, §1.2 below. **Mixed load is still unrun on thi
 `[not tested]` — the last figure is the fast-boot arm's 7.0 tok/s with a 4.9 s TTFT for the long
 prompt.
 
+**And prefill has a third figure now, from a third instrument, so all three are written down with
+their method rather than one of them being promoted over the others.** The rows in this repository are
+not interchangeable `[measured-here]`:
+
+| Prefill figure | Instrument and method | Date |
+|---|---|---|
+| **1,738** tok/s | `bench/prefill-fresh.py` — one fresh request at a time, a new seed per request, median of three. This is the row in the table above and in the README's headline | 5–6 September, production 9/12 |
+| 1,575 tok/s | `scripts/prefill-7k.py` — the **warm repeated-prompt** figure, labelled as such everywhere it appears | 5 September, production 9 |
+| 1,914 tok/s | 60 s counter delta under 24 fresh ~7K prompts, a generator **this repository does not ship**. Kept as published; not comparable with the row below | 7 September, production 13 |
+| **1,867** tok/s | [`tracks/tp3/patches/flashkda/loadgen.py`](../tracks/tp3/patches/flashkda/loadgen.py) — `vllm:prompt_tokens_total` over a 60 s window opening 20 s after the load starts, 24 fresh nonce-prefixed ~7,000-token prompts in flight, `max_tokens=8`, **prefix-cache hits counted over the same window and zero**. The control arm of the same A/B, one environment variable apart, read **1,754**; the promoted configuration on the production fast-load path read **1,865.7** and **1,866.6** | 10 September, production 13 + FlashKDA |
+
+The last row is a **sustained-throughput** measurement and the first is a per-request one; they answer
+different questions and the gap between them is not a result. What *is* a result is the 1,754 → 1,867
+inside the last row, because both halves came from the same instrument in the same session
+([`../results/gates/flashkda-ab-10sep.md`](../results/gates/flashkda-ab-10sep.md)). The estimate that
+preceded it was +3.5–4.1 % against a measured +6.5 %, and the excess is open as
+[11](11-open-issues.md) §2.35.
+
 ### 1.1 The spread these numbers sit inside, and which reading the headline uses
 
 Every headline figure on this page is **the median of that boot's sweep rounds** — three rounds with a

@@ -408,6 +408,37 @@ offered upstream with its description in `patches/kernel/0003-PR-DESCRIPTION.md`
 - **Licence:** **Apache-2.0**, as above. We carry the mechanism, not the diff: our grouping path is
   not upstream's, so the anchors are ours.
 
+### `vllm-project/FlashKDA` and [@JaredforReal](https://github.com/JaredforReal) — the fused KDA prefill kernel
+
+- **What we use it for:** the whole of
+  [`tracks/tp3/patches/flashkda/`](tracks/tp3/patches/flashkda/README.md). GLM-5.3-Flash's KDA
+  chunked prefill runs through the fused `vllm._flashkda_C` kernel instead of the ten-kernel Triton
+  `chunk_kda_with_fused_gate` chain: sustained prefill **+6.5 %**, TTFT at 7K **−5.1 %**
+  ([`results/gates/flashkda-ab-10sep.md`](results/gates/flashkda-ab-10sep.md)).
+- **The kernel:** [vllm-project/FlashKDA](https://github.com/vllm-project/FlashKDA). We vendor nothing
+  of it and did not build it — it is already compiled into the base image, because Kimi-K3 uses it.
+  The revision matters and is easy to read off the wrong checkout: our image's extension is built from
+  **`b5d11010`** (28 July 2026), the tag `cmake/external_projects/flashkda.cmake` pins at vLLM
+  `487ecf187`, and it is seven commits behind upstream's `3b225bf` (2 September 2026). The evidence is
+  behavioural rather than a filename — this image's `_flashkda_C::fwd` takes **14 arguments** and has
+  no `checkpoint_state` / `checkpoint_offsets` tail, parameters FlashKDA gained on 6 August 2026.
+- **The change:** [vllm-project/vllm#55737](https://github.com/vllm-project/vllm/pull/55737),
+  **[@JaredforReal](https://github.com/JaredforReal)**, open at the time of writing — the backend
+  resolver, the FlashKDA prefill wrapper over the v1 workspace manager, and the spec/non-spec scatter
+  scheme. Our five anchors are his diff adapted to a tree that predates it: the two trailing
+  `checkpoint_*` arguments dropped because this build has no such overload, and his
+  `additional_config["kda_prefill_backend"]` knob kept but fronted by an environment gate, because our
+  launcher passes no `--additional-config`. His GB300/TP4 numbers (TTFT −8 … −13 %) and his accuracy
+  runs are in the pull request `[reported]`; ours are smaller and in the same direction, which is what
+  a prefill dominated by EXL3 MoE GEMMs predicts. **He is also the author of the GLM-5.3-Flash support
+  this whole stack is built on**, vLLM [#53906](https://github.com/vllm-project/vllm/pull/53906),
+  submitted by [@ZJY0516](https://github.com/ZJY0516).
+- **What we added rather than took:** the once-per-process boot line that says which kernel won
+  (`[HAREM-FLASHKDA] kda_prefill_backend=…`). The pull request prints nothing equivalent, and without
+  it a registration mistake is a healthy boot running the old path. It is offered back in the patch's
+  own page.
+- **Licence:** **Apache-2.0** for both vLLM and FlashKDA, as above.
+
 ### `autoscriptlabs/nccl-mesh-plugin` — the fabric transport
 
 - **What we use it for:** NCCL over three direct ConnectX-7 links with no switch. Without it there is

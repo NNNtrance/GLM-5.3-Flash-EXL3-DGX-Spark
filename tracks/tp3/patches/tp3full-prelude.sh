@@ -151,6 +151,33 @@ fi
 # rank instead of serving a silently-wrong model.
 run python3 "$TP3_DIR/patch-indexer-workspace-tp3.py" --root "$VLLM_PY"
 
+# --- prefix-hit + kpool-tail backports (8 September 2026, production 13) ------
+# Two upstream backports the pinned vLLM predates, both applied
+# UNCONDITIONALLY with their BEHAVIOUR env-gated and default OFF, so the knobs
+# unset == production configuration 12's tree byte for byte.  The production
+# environment file sets both.
+#
+#  HAREM_PREFIX_HIT=1      flag ONLY the DFlash2 drafter's KV groups as EAGLE
+#                          groups.  Unset, nothing is flagged and the
+#                          coordinator falls back to flagging EVERY group, so
+#                          the target MLA group drops a whole 3,328-token block
+#                          off every exact-repeat prefix hit.
+#  HAREM_KPOOL_TAIL_FIX=1  pass positions through the hybrid attention-metadata
+#                          path so the K-pool tail's own circular slot mapping
+#                          runs, and write it in place.  Without it 99.67 % of
+#                          the tail's writes address a block that is not the
+#                          request's own.
+#  HAREM_KPOOL_TAIL_BOUNDS=1  arm the tail wrong-block counter (log only, an
+#                          evidence arm rather than a production setting).
+# Same fail-closed `run` wrapper as every arm above.
+# Design, measurements and the two-boot promotion: patches/prefix-hit-and-kpool-tail/.
+# NOTE the flat path: in this repository these two live in a subdirectory for a
+# reader's benefit, but on a node every patch script sits directly in $TP3_DIR,
+# because the sidecar identity hashes glob($TP3_DIR/patch-*.py) and a script in
+# a subdirectory is neither hashed nor found (docs/08 section 4).
+run python3 "$TP3_DIR/patch-prefixhit-tp3.py" --root "$VLLM_PY"
+run python3 "$TP3_DIR/patch-kpooltail-tp3.py" --root "$VLLM_PY"
+
 # --- Full-scope EXL3 (5 September 2026) ------------------------------------------
 # One patch, three layers, one knob:
 #   S1  packed_modules_mapping on both glm5next model classes
@@ -177,6 +204,42 @@ if [ "${HAREM_EXL3_FULLSCOPE:-}" = "1" ]; then
   # Say which cuda-exl3 padded-load support is present, before the weights move.
   run python3 "$TP3_DIR/check-padload-tp3.py"
 fi
+
+# --- FlashKDA KDA chunked prefill (10 September 2026, vLLM PR #55737 port) ---
+# Applied UNCONDITIONALLY so a control arm runs the same bytes as the candidate;
+# the BEHAVIOUR is env-gated and default OFF.
+#   HAREM_KDA_FLASHKDA unset / 0  -> the Triton chunk_kda_with_fused_gate chain,
+#                                    byte for byte upstream (one environment
+#                                    read per KDA layer at construction).
+#   HAREM_KDA_FLASHKDA=1          -> the fused vllm._flashkda_C kernel for KDA
+#                                    chunked prefill, and a loud refusal if this
+#                                    hardware/dtype/head_dim cannot take it.
+# The chosen backend is printed once per process as
+#   [HAREM-FLASHKDA] kda_prefill_backend=triton|flashkda
+# A boot log with no such line is a boot where this patch did not run.
+# ORDER: after patch-fullscope-tp3.py, the other arm that edits
+# glm5next/nvidia/kda.py (its anchors are in __init__ and weight loading; the
+# five here are the import block, _cast_sigmoid, the end of __init__, forward's
+# definition line and the chunked-prefill call -- no overlap). Against the
+# vision block order is immaterial: that one edits model.py and multimodal.py.
+# TWO THINGS ABOUT THIS LINE, and each cost a boot:
+#   --root is the DIST-PACKAGES root, not $VLLM_PY -- this script's REL starts
+#     with "vllm/", unlike every other patch script here, so --root "$VLLM_PY"
+#     gives .../vllm/vllm/models/... and raises FileNotFoundError.
+#   --in-place is required. Without it the script is a DRY RUN: it prints
+#     "dry run OK", exits 0 and patches nothing, which is a healthy boot that
+#     quietly keeps running the old path.
+# Same fail-closed `run` wrapper as every arm above.
+# Design, the A/B and the sidecar consequence: patches/flashkda/README.md and
+# results/gates/flashkda-ab-10sep.md.
+run python3 "$TP3_DIR/patch-flashkda-tp3.py" \
+    --root "$(dirname "$VLLM_PY")" --in-place
+
+# --- Vision tower -------------------------------------------------------------
+# Production configuration 13 also runs the vision block, which is kept beside
+# its own patch and gates rather than inlined here: paste
+# patches/vision/prelude-vision-hook.sh in at this point. On our nodes it sits
+# directly after the FlashKDA line above.
 
 # Import flashinfer.comm once, CPU-side, before any worker starts: prints the
 # version into the boot log and warms flashinfer's JIT cache so the ranks do not

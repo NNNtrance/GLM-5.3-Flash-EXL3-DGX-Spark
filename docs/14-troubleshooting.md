@@ -3,9 +3,9 @@
 **Applies to: both tracks.** Every entry carries its own **Track** line — see the third convention
 below.
 
-Eighty-six entries, with the exact text where one exists. This page is the reason the rest of the
+Eighty-seven entries, with the exact text where one exists. This page is the reason the rest of the
 repository can be short: if you are stuck, the answer is probably here, and if it is not, the shape of
-the answer probably is. **Two of the eighty-six are not failures we hit**, and each says so in its own
+the answer probably is. **Two of the eighty-seven are not failures we hit**, and each says so in its own
 heading: §9.8 is a corruption the code blocks before it can happen, and §9.9 is a hypothesis a
 measurement refuted before it cost us anything. They are counted and kept because this is where a
 reader will look for them.
@@ -29,7 +29,7 @@ understanding:
 | **TP=3 only** | It cannot happen at two ranks: it is about the padding, the padded load, or expert parallelism being mandatory |
 | **TP=2 only** | We only ever hit it at two ranks, and the entry says why three did not |
 
-Across the page, **45** entries are plain **both** and another **26** are both-but-measured-at-three
+Across the page, **45** entries are plain **both** and another **27** are both-but-measured-at-three
 ranks. That is a useful finding on its own: most of what goes wrong on this stack does not care how
 many nodes you have. Thirteen are TP=3 only and two are TP=2 only.
 
@@ -79,8 +79,10 @@ that mean nothing.** That is why correctness and memory come before timing.
 | `copy_` shape mismatch in `_vocab_loaders` | §2.16 |
 | `ValueError: could not find tensor_storage` | §2.17 |
 | `fatal error: cusolverDn.h: No such file or directory` | §2.21 |
-| `preflight-fastload: sidecar stale - boot refused` | §3.1 |
+| `preflight-fastload: sidecar stale - boot refused` | §3.1, §10.6 |
 | Container exits immediately, `Exited (21)` on all three nodes | §3.1 |
+| `fast-load sidecar missing: …` and all units `failed` before the container starts | §10.6 |
+| A boot log with no `[HAREM-FLASHKDA] kda_prefill_backend=` line | §10.6 |
 | `ValueError: 6.6 GiB KV needed for max seq len 1,000,000, available 0.73 GiB` | §5.3 |
 | `Setting attention block size to 3328 tokens…` | §5.2 |
 | Request accepted, then `Running: 0, Waiting: 1` forever | §5.4 |
@@ -1745,6 +1747,78 @@ what was missing was the sentence saying why the directory has to exist separate
 **Do it before the dump boot.** The fast-load sidecar's identity hashes the drafter's `config.json`,
 so fixing the config afterwards invalidates the sidecar and costs a second dump — which is exactly
 what it cost us, 8 September 2026 `[measured-here]`. [19](19-vision-at-two-ranks.md) §3.
+
+### 10.6 Registering a new prelude patch invalidates the sidecar — and the preflight gate demanded one in dump mode
+
+**Track:** both, measured at TP=3 only — the `ExecStartPre` gate is in both tracks' preflight scripts
+and only the three-node one has ever been exercised against a new sidecar directory.
+
+**Symptom, part one.** A new `patch-*.py` is copied into the patch directory and the prelude is taught
+to call it. The behaviour is env-gated and switched off, so nothing about the served model changes.
+The next boot is refused on every node anyway:
+
+```
+preflight-fastload: sidecar stale - boot refused
+  patches.patch-flashkda-tp3.py: recorded='<none>' now='4e9a0415...'
+  patches.tp3-prelude.sh:        recorded='3b78d02d...' now='be712c25...'
+```
+
+**Symptom, part two — the expensive one.** The fix for part one is to dump a new sidecar into a new
+directory. That restart never starts the container at all: all three units go straight to `failed`,
+before any engine log exists.
+
+```
+fast-load sidecar missing: /var/tmp/glm53-exl3-flashkda-r0
+```
+
+**Mechanism.** `harem_fastload_id.file_identity()` hashes `glob($TP3_DIR/patch-*.py)`, the full text of
+the prelude and the overlay module into the manifest ([08](08-fast-boot.md) §4), so the *presence* of a
+file is part of the identity even when the code it contains never runs. §3.1 and §3.2 already say that.
+What was new on 10 September is the second half: `motor-onkosul-exl3.sh`, the unit's `ExecStartPre`,
+tested `$FASTLOAD_DIR-r$RANK/MANIFEST.json` **regardless of `FASTLOAD_MODE`** and skipped only when
+`FASTLOAD_DIR` was empty. Dump mode is what *creates* that directory, so a new `FASTLOAD_DIR` could
+never be booted: the mode whose job is to make the directory required the directory to already exist.
+
+**What it cost.** The engine was down from 03:26:28 to 03:44:18 UTC — **17 min 50 s** — while a
+chicken-and-egg in our own gate was diagnosed `[measured-here]`. No production artefact was
+overwritten and the previous sidecars were intact throughout, which is the only reason it was 18
+minutes and not an evening.
+
+**Fix — narrow the gate, do not remove it.** One clause, and it is in the shipped
+[`tracks/tp3/motor-onkosul-exl3.sh`](../tracks/tp3/motor-onkosul-exl3.sh):
+
+```
+FM=$(grep -E "^FASTLOAD_MODE=" "$ENVF" | cut -d= -f2)
+[ -z "$FD" ] || [ "$FM" != load ] || test -f "$FD-r$R/MANIFEST.json" || { echo "fast-load sidecar missing: $FD-r$R"; exit 1; }
+```
+
+`load` is the only mode in which a missing sidecar is fatal. In `dump` the launcher creates the
+directory itself; with the mode empty fast loading is not in play. The same edit is carried in
+[`tracks/tp2/motor-onkosul-exl3-tp2.sh`](../tracks/tp2/motor-onkosul-exl3-tp2.sh) `[not tested]` at two
+ranks.
+
+**How to plan a patch A/B after this, in order.**
+
+1. **Run the comparison sidecar-less.** Set `FASTLOAD_MODE=` empty in *both* arms — the launcher then
+   skips the whole fast-load block and the prelude never calls the preflight — and register the patch
+   in both, so one environment variable is the only difference. There is no "registered but switched
+   off" state that keeps the sidecar valid, so this is not a preference; it is the only symmetric A/B
+   available.
+2. **Expect a slower boot and a different boot path.** Ours were 285 s and 315 s against production's
+   165–234 s, and a sidecar-less boot moved single-stream decode by 4.7 % on its own — which a
+   single-arm comparison would have published as a kernel gain
+   ([`results/gates/flashkda-ab-10sep.md`](../results/gates/flashkda-ab-10sep.md) §2.1).
+3. **Re-measure the winner on the real path.** Dump into a **new** `FASTLOAD_DIR` (§3.4 — reusing the
+   name overwrites the rollback), switch to `load`, and repeat the headline measurement: ours read
+   1,865.7 and 1,866.6 tok/s against the sidecar-less arm's 1,867.4 / 1,868.8.
+4. **Keep the old sidecar until the configuration is retired.** 53 GB per node per sidecar. Check the
+   free space first: ours went 546 G → 493 G.
+
+**And print which arm ran.** Neither the sidecar nor the gate tells you whether the patch did anything.
+A patch script that defaults to a dry run without `--in-place` produces a healthy boot that silently
+keeps the old code path — so the patched code should say so once per process, as
+`[HAREM-FLASHKDA] kda_prefill_backend=flashkda` does.
+[`tracks/tp3/patches/flashkda/`](../tracks/tp3/patches/flashkda/README.md) §3.
 
 ---
 

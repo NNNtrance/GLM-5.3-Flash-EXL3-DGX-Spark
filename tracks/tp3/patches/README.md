@@ -28,9 +28,10 @@ that lands in `patches/tp3/` does not reach here on its own. Merging them is the
 | `check-padload-tp3.py` | **new** — the image gate, run in the prelude before any weight is read |
 | `pad-tp3full.py` | **new** — the sidecar generator: padded `config.json` **plus** a rewritten `quantization_config.json` carrying the packed mapping |
 | `mk-env-tp3full.sh` | **new** — derives `.env.tp3-full` from *this node's own* `.env.tp3` with `sed` |
-| `tp3full-prelude.sh` | **changed** — `tp3/tp3-prelude.sh` plus the two `HAREM_EXL3_FULLSCOPE` steps and the `HAREM_SM12_ITEMS` block |
+| `tp3full-prelude.sh` | **changed** — `tp3/tp3-prelude.sh` plus the two `HAREM_EXL3_FULLSCOPE` steps, the `HAREM_SM12_ITEMS` block, the indexer-workspace bound, the two 8 September backports and the FlashKDA line. The **vision** block is the one arm still kept outside it, as a paste-in hook beside its own gates ([`vision/prelude-vision-hook.sh`](vision/prelude-vision-hook.sh)); our production prelude carries it directly after the FlashKDA line |
 | `patch-pdl-gate.py` | **new in production 11** — sm_12x item 1: Programmatic Dependent Launch off on sm_12x by default, `HAREM_PDL_SM12=1` restores upstream |
 | `patch-kpool-init.py` | **new in production 11** — sm_12x items 2 + 3: the K-pool top-k buffer starts at −1 and its reader is bounded from above |
+| `flashkda/patch-flashkda-tp3.py` | **new in production 13 + FlashKDA (10 September 2026)** — five anchors in `glm5next/nvidia/kda.py` that route KDA chunked prefill through the fused `vllm._flashkda_C` kernel, behind `HAREM_KDA_FLASHKDA`. Grouped in a subdirectory here for a reader; **on a node it sits directly in `$TP3_DIR`** with everything else, because the sidecar identity hashes `glob($TP3_DIR/patch-*.py)`. Its prelude line is the one in this tree with a different `--root` and a mandatory `--in-place`, and [`flashkda/README.md`](flashkda/README.md) §3 says why |
 | `patch-vllm-tp3.py` | **changed** — two constants: vocab `padding_size` 192 → **384**, shared expert 2112 → **2304** |
 | `preflight-tp3.py` | **changed** — the same two, as `lcm(128, tp)`, plus three new 128-alignment gates |
 | everything else | **byte-identical copies** of the file of the same name in `patches/tp3/` |

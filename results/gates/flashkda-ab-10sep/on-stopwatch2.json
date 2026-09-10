@@ -1,0 +1,21 @@
+{
+  "tag": "ON-sw2",
+  "mode": "stopwatch",
+  "conc": 24,
+  "settle_s": 20.0,
+  "window_s": 60.012,
+  "prefill_tok_per_s": 1868.8,
+  "decode_tok_per_s_during": 2.1,
+  "prompt_tokens_in_window": 112150,
+  "prefix_cache_queries_in_window": 112139,
+  "prefix_cache_hits_in_window": 0,
+  "requests_ok": 44,
+  "requests_err": 0,
+  "errors": [],
+  "prompt_tokens_mean": 7011.3,
+  "prompt_tokens_min": 6939,
+  "prompt_tokens_max": 7103,
+  "running_at_window_open": 2.0,
+  "waiting_at_window_open": 21.0,
+  "utc": "2026-09-10T03:12:04Z"
+}

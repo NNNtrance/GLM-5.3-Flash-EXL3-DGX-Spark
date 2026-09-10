@@ -1,0 +1,21 @@
+{
+  "tag": "teyit-final",
+  "mode": "stopwatch",
+  "conc": 24,
+  "settle_s": 20.0,
+  "window_s": 60.012,
+  "prefill_tok_per_s": 1866.6,
+  "decode_tok_per_s_during": 2.1,
+  "prompt_tokens_in_window": 112021,
+  "prefix_cache_queries_in_window": 112013,
+  "prefix_cache_hits_in_window": 0,
+  "requests_ok": 44,
+  "requests_err": 0,
+  "errors": [],
+  "prompt_tokens_mean": 7015.0,
+  "prompt_tokens_min": 6943,
+  "prompt_tokens_max": 7124,
+  "running_at_window_open": 2.0,
+  "waiting_at_window_open": 21.0,
+  "utc": "2026-09-10T03:58:53Z"
+}

@@ -1,0 +1,31 @@
+# /health 200 after each restart, and the KV pool each boot reported.
+# Times are UTC. T0 is the harness's own mark, taken just before the three
+# units were restarted; the units' journal puts each boot 3 s later, so the
+# gap between arms is the same on either basis (results/gates/flashkda-ab-10sep.md
+# section 2.2). The two A/B arms are SIDECAR-LESS boots and are therefore slower
+# than production's 165-234 s; the dump and load boots at the end are the
+# promotion.
+
+--- boot, FlashKDA arm (HAREM_KDA_FLASHKDA=1), sidecar disabled
+T0=1789009073 2026-09-10T02:57:53Z
+HEALTH-OK after 285 s
+--- boot, Triton control arm (HAREM_KDA_FLASHKDA=0), sidecar disabled
+T0=1789010005 2026-09-10T03:13:25Z
+HEALTH-OK after 315 s
+--- boot, FASTLOAD_MODE=dump into the new FASTLOAD_DIR
+T0=1789010785 2026-09-10T03:26:25Z   attempt 1 -- REFUSED by ExecStartPre, see docs/14 section 10.6
+T0=1789011464 2026-09-10T03:37:44Z   attempt 2, after the gate was narrowed
+HEALTH-OK after 394 s
+--- boot, FASTLOAD_MODE=load = the promoted production state
+T0=1789011883 2026-09-10T03:44:43Z
+HEALTH-OK after 181 s
+
+# The engine's own line, one per boot, in order. Container logs are UTC.
+--- baseline, production before the session
+(EngineCore pid=382) INFO 09-10 02:26:04 [kv_cache_utils.py:2341] GPU KV cache size: 7,104,683 tokens, Maximum concurrency for 1,000,000 tokens per request: 7.10x
+--- FlashKDA arm
+(EngineCore pid=440) INFO 09-10 03:02:03 [kv_cache_utils.py:2341] GPU KV cache size: 7,099,173 tokens, Maximum concurrency for 1,000,000 tokens per request: 7.10x
+--- Triton control arm
+(EngineCore pid=383) INFO 09-10 03:17:30 [kv_cache_utils.py:2341] GPU KV cache size: 7,077,134 tokens, Maximum concurrency for 1,000,000 tokens per request: 7.08x
+--- promoted production, new sidecar
+(EngineCore pid=383) INFO 09-10 03:47:16 [kv_cache_utils.py:2341] GPU KV cache size: 7,030,303 tokens, Maximum concurrency for 1,000,000 tokens per request: 7.03x

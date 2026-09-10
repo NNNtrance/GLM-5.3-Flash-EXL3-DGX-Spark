@@ -1,0 +1,7 @@
+  depth 0.02 (n=54,694): PASS -> 'QX7-4412'
+  depth 0.20 (n=54,694): PASS -> 'ZM3-9087'
+  depth 0.40 (n=54,692): PASS -> 'KR8-2251'
+  depth 0.60 (n=54,693): PASS -> 'TV5-6630'
+  depth 0.80 (n=54,693): PASS -> 'BN2-3374'
+  depth 0.97 (n=54,693): PASS -> 'LP9-8105'
+NEEDLE-LITE (sequential): 6/6  (either 6/6)
