@@ -29,7 +29,7 @@ def ask(p,mx=400,temp=0.0):
     # 'reasoning' field and leaves 'content' EMPTY -- same prompt, same
     # settings, and it varies even at temperature 0. Hence the two counts
     # described in the module docstring.
-    return (m.get("content") or ""), (m.get("reasoning") or "")
+    return (m.get("content") or ""), (m.get("reasoning_content") or m.get("reasoning") or "")
 
 TESTS=[
  ("arith-1","What is 17 multiplied by 23? Reply with only the number.", lambda s: "391" in s),

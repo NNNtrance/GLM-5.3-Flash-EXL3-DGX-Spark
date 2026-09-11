@@ -58,7 +58,7 @@ def ask(p):
     # even at temperature 0). Empty content would score zero here even though
     # the model did write the code, so we fall back to the reasoning field.
     c=(m.get("content") or "").strip()
-    return c if c else (m.get("reasoning") or "")
+    return c if c else (m.get("reasoning_content") or m.get("reasoning") or "")
 
 def extract_code(t):
     b=re.findall(r"```(?:python)?\s*\n(.*?)```", t, re.S)
