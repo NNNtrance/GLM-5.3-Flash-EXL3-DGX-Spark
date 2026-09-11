@@ -14,6 +14,12 @@ written, so from ``pos >= 4`` the mapping reads an unwritten column and every
 request collapses onto physical tail block 0; from ``pos >= 128`` it reads past
 the row entirely.  The two kpool write kernels (the prefill seed and the decode
 update) then store through whatever block id came back, with no bounds check.
+("32 entries wide" is this code path's own allocation for the tail group's row
+-- ``kpool-tail-unit-test.py``'s model-free harness pins the same width, hence
+the same pos >= 128 overrun there.  docs/11 section 2.33's 250,016 entries is a
+different row: the runner's full-width block table, sized
+``cdiv(max_model_len, block_size)``, where the tail group never overruns but is
+still wrong for 99.67 % of tokens.  Both figures are true, of different rows.)
 
 The image already contains the correct mapping --
 ``compute_kpool_tail_slot_mapping`` in ``v1/attention/backends/mla/indexer.py``,

@@ -11,6 +11,42 @@ rounds, which is what the persisted MLA tuner cache bought — see
 
 ---
 
+## 11 September 2026 — issue #2 closed (chat template pinned), issue #6 closed (patch ordering + tail-row docstring), and a gate field fix
+
+**Issue #2 is closed.** The env examples now pin `CHAT_TEMPLATE_HOST` to a named revision instead of
+leaving it to chance: `tracks/tp3/env.tp3.example`, `tracks/tp3/env.tp3-full.example` and
+`tracks/tp2/env.tp2-full.example` each carry a comment next to the line naming
+`zai-org/GLM-5.3-Flash @ 690b7052` (4 September 2026), 10,950 bytes,
+`sha256 0c4099f3382d6c92700dfb99725025360966fd73032f0ecf32377c0d9e6309c5`, with
+`python3 scripts/verify-chat-template.py "$CHAT_TEMPLATE_HOST"` to check it. Only this revision
+carries the tool-calling fixes, and its `clear_thinking` default is the one both launchers already
+guard ([docs/14](docs/14-troubleshooting.md) §9.11, §9.12). That script is jdecker76's **PR #5**,
+merged as `44a9722`.
+
+**Issue #6 is closed**, two follow-ups on the K-pool tail work, both reported by jdecker76:
+(a) [`patches/prefix-hit-and-kpool-tail/README.md`](tracks/tp3/patches/prefix-hit-and-kpool-tail/README.md#ordering)
+gets an **Ordering** note — `patch-kpooltail-tp3.py` and `patch-indexer-workspace-tp3.py` both edit
+`v1/attention/backends/mla/indexer.py`, and the only sequence ever exercised runs kpooltail *after*
+indexer-workspace, which is what `tp3full-prelude.sh` (lines 152 and 179) and `tp2full-prelude.sh`
+(lines 138 and 159) already do. (b) `patch-kpooltail-tp3.py`'s module docstring gets one clarifying
+clause: its "32 entries wide" names the tail group's own block-table row as this code path allocates
+it (the same width `kpool-tail-unit-test.py`'s model-free harness pins), a different row from
+[docs/11](docs/11-open-issues.md) §2.33's 250,016-entry figure, which is the runner's full-width row
+(`cdiv(max_model_len, block_size)`) — both numbers are true, of different rows. Editing that
+docstring still changes the file's hash, and the fast-load sidecar identity hashes every
+`patch-*.py`, so the README now says redeploying it wants a sidecar-less boot, not a restart
+([docs/08](docs/08-fast-boot.md) §4).
+
+**`correctness-probe.py` and `code-exam.py` now read `reasoning_content`** (`1b0b93f`), the field
+this engine actually returns on vLLM `487ecf187` — both were reading `reasoning` instead, which
+`early-stop-ab.py` and `mixed-load-probe.py` already knew not to do. Found while reviewing PR #4; the
+old key is kept as a fallback.
+
+jdecker76's [CREDITS.md](CREDITS.md) entry now also names PR #5 and the issue #6 ordering report,
+which the existing §9.11 / K-pool-tail lines there had left implicit.
+
+---
+
 ## 10 September 2026 — FlashKDA for KDA chunked prefill: +6.5 % of prefill, and 18 minutes paid to one of our own gates
 
 **The fused `vllm._flashkda_C` kernel now runs GLM-5.3-Flash's KDA chunked prefill** instead of the

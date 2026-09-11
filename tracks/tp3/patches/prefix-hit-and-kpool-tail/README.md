@@ -49,6 +49,21 @@ Standing items: [docs/11](../../../../docs/11-open-issues.md) §2.32 and §2.33.
 | [`cached-equality.py`](cached-equality.py) | **The test that settled the promotion.** 24 needle-style prompts at three sizes, each asked cold and then repeated byte-for-byte, with the prefix-cache counters read either side so the repeat is *proved* to be a hit. Passes only if every repeat answer is identical to its cold answer and both are correct. `--order passes` reproduces the design that does not work, and section 6.3 of the results page says why |
 | [`mixed-soak.py`](mixed-soak.py) | Fifteen minutes of eight concurrent streams, half code and half prose, plus two 4,096-token generations — ten in flight against `--max-num-seqs 8`, so the scheduler queues as well as batches. Records the head, tail and top word of every generation, so a row its repetition heuristic flags can be read instead of guessed at |
 
+## Ordering
+
+`patch-kpooltail-tp3.py` and `patch-indexer-workspace-tp3.py` (one directory up, in
+[`patches/indexer-workspace/`](../indexer-workspace/patch-indexer-workspace-tp3.py)) both edit
+`v1/attention/backends/mla/indexer.py`. Run `patch-kpooltail-tp3.py` AFTER
+`patch-indexer-workspace-tp3.py` — that is the only sequence exercised. `tracks/tp3/patches/tp3full-prelude.sh`
+already does this (`patch-indexer-workspace-tp3.py` at line 152, `patch-kpooltail-tp3.py` at line 179,
+both as of `fbaf5e4`), and `tp2full-prelude.sh` orders the same pair the same way (lines 138 and 159).
+Credit: reported by jdecker76 in #6.
+
+A docstring-only edit to `patch-kpooltail-tp3.py` still changes the file's hash, and the fast-load
+sidecar identity hashes every `patch-*.py` in `$TP3_DIR` — so redeploying this file after such an
+edit requires a sidecar-less boot (or a fresh dump), not a plain restart; see
+[docs/08](../../../../docs/08-fast-boot.md) §4.
+
 ## The knobs
 
 | Variable | Values | Effect |

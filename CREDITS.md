@@ -637,3 +637,7 @@ sibling on the same cluster; a root cause this repository had missed (the templa
 `zai-org/GLM-5.3-Flash`); the field evidence for the K-pool tail fix; and the design of the
 multi-turn gate in [HELP-WANTED](HELP-WANTED.md) §14. Corrected their own report in public when a
 measurement disagreed with it, which is the standard this repository tries to hold itself to.
+Also: PR #5, the `verify-chat-template.py` fingerprint script itself (merged as `44a9722`, now
+pinned by revision in the tp2/tp3 env examples); and issue #6's report that `patch-kpooltail-tp3.py`
+and `patch-indexer-workspace-tp3.py` collide on `indexer.py`, answered by the Ordering note in
+[`patches/prefix-hit-and-kpool-tail/README.md`](tracks/tp3/patches/prefix-hit-and-kpool-tail/README.md#ordering).
