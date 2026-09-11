@@ -645,6 +645,15 @@ fail-closed parser ([docs/14](docs/14-troubleshooting.md) §9.13) a rejected cal
 same assertion can count. A replay fixture built from a real corrupted session is the one thing neither
 we nor issue #7 have published.
 
+**A starting point exists for the tool-call half.** [`scripts/toolcall-gate.py`](scripts/toolcall-gate.py)
+already drives a synthetic agentic session — 30 tool definitions, a fabricated repository, the client's
+own history echoed back verbatim including `tool_calls` — and classifies every turn into the six
+categories this section describes, bucketed by context length
+([results/gates/toolcall-gate-11sep.md](results/gates/toolcall-gate-11sep.md)). What it is missing is
+the one thing neither we nor issue #7 have published: **a replay fixture built from a real corrupted
+session**, rather than a fabricated one. Swapping in a captured transcript is the natural next step,
+not a rewrite.
+
 What we would like: a replay of a 20-turn agentic transcript — tool calls, reasoning turns, the
 client echoing each assistant message back verbatim, as real clients do — against a warm prefix
 cache at temperature 1.0 / top_p 0.95, with two assertions: (a) `prompt_tokens` per turn grows by no

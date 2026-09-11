@@ -1686,6 +1686,14 @@ call re-enters the history. `HAREM_GLM47_FAILCLOSED`, default **on**, `=0` upstr
 - A valid streaming tool call now arrives as **one** `tool_call` delta rather than a name delta plus
   argument deltas. That is the intended behaviour change and the one thing a client might notice.
 
+**Measured.** A 4-session × 30-turn synthetic agentic replay against this build
+([`scripts/toolcall-gate.py`](../scripts/toolcall-gate.py),
+[results/gates/toolcall-gate-11sep.md](../results/gates/toolcall-gate-11sep.md)) produced 118 tool
+calls up to 100,522 tokens of context with **zero** fail-closed rejections, empty turns, repeats or
+`finish_reason=length`; the one schema miss was the harness's own 2,048-token completion cap truncating
+a long `write` call, not a derailment. One run, one effort level, a fabricated repository — a
+measurement, not a rate, and not a substitute for the gate below.
+
 **What is still open.** The patch does not touch the **rate** of the first corruption, only its
 consequence — see [11](11-open-issues.md) §2.30, where whether the 4bpw EXL3 checkpoint raises that rate
 against the NVFP4 sibling is still varying with the build. The gate that would catch this class before a

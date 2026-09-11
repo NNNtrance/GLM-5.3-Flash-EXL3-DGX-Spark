@@ -11,6 +11,10 @@ rounds, which is what the persisted MLA tuner cache bought — see
 
 ---
 
+## 11 September 2026 — measured: 118 tool calls to 100.5k tokens on the fail-closed build, 0 malformed XML ([results/gates/toolcall-gate-11sep.md](results/gates/toolcall-gate-11sep.md))
+
+---
+
 ## 11 September 2026 — issue #7: the malformed tool-call cascade, and a fail-closed glm47 parser in production
 
 **The third and last mechanism of issue #1 is closed, and it was not ours to find.** YuXiaoPan caught
