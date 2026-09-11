@@ -11,6 +11,8 @@ knob, **default on**.
 |---|---|---|---|
 | **Fail-closed glm47 parser** | `HAREM_GLM47_FAILCLOSED=1`, or unset | a tool call is buffered until it closes, then validated against the request's tools and their schemas; an invalid call becomes `content`, not a `tool_call` | **In the recipe**, 11 September |
 | | `0` | **upstream behaviour, byte for byte** — every override returns `super()` immediately and `stream_arg_deltas` goes back to `True` | the control arm, and the fastest rollback |
+| **Required-field check** | `HAREM_GLM47_REQUIRED=1`, or unset | sub-gate of the above: a call missing any key in the tool's `parameters.required` is rejected too — presence only, an empty string value passes | **Not in production**, written 11 September, pending A/B + gates ([docs/14](../../../../docs/14-troubleshooting.md) §9.13) |
+| | `0` | keys are shape- and `properties`-checked only, as they were before | the control arm for that A/B |
 
 **The default is ON, and that is deliberate** — it is the only patch in this tree that defaults on.
 Everywhere else an unset knob means *upstream*, because upstream is the safe side. Here upstream is
@@ -33,7 +35,7 @@ without it.
 | File | What it does |
 |---|---|
 | [`patch-glm47-failclosed-tp3.py`](patch-glm47-failclosed-tp3.py) | The patch. Six exact-text anchors in `vllm/parser/glm47_moe.py`, each required **exactly once**: the stdlib import block, the vLLM import block (where the module logger and the gate land), the parser class's config, the `TOOL_CALL_END` handler, the finish path, and the arg converter's call site. A missing or duplicated anchor exits non-zero instead of guessing; re-running is a no-op |
-| [`test_failclosed.py`](test_failclosed.py) | **37 checks, CPU only, no model, no engine** — it imports the patched parser and drives it directly. The corruption vectors are the ones captured live in issue #7, not invented ones. §3 |
+| [`test_failclosed.py`](test_failclosed.py) | **54 checks, CPU only, no model, no engine** — it imports the patched parser and drives it directly. The corruption vectors are the ones captured live in issue #7, not invented ones. 37 of the 54 are the set that passed before production adoption on 11 September; the other 17 cover the required-field check, which is **not in production yet**. §3 |
 
 ---
 
@@ -129,9 +131,12 @@ docker run --rm -v /tmp/issue7:/w --entrypoint bash exl3-zeus:754421f -c "
 ```
 
 `--rm` means the in-place patch dies with the container; nothing on the node changes. **37/37 passed**
-on 11 September 2026.
+on 11 September 2026 before adoption, and the suite is now **54/54** — the 17 required-field checks added
+later the same day were developed outside the image against a stub harness and then **run in the image on
+11 September, 19:16, all passing**; the required-field arm went into production in the 19:18 boot
+alongside the xgrammar backports ([`results/gates/xgrammar-backports-11sep.md`](../../../results/gates/xgrammar-backports-11sep.md)).
 
-What the 37 cover: the two corrupted `<arg_key>` sequences captured in issue #7 — one of them
+What the checks cover: the two corrupted `<arg_key>` sequences captured in issue #7 — one of them
 carrying Anthropic-style `</invoke>` and `<parameter name=` fragments, i.e. the model having lost its
 format rather than mistyped it — the unclosed call that produced the empty turn, a hallucinated tool
 name, a key that parses cleanly but is outside the tool's schema, a valid call, a valid call with no

@@ -51,6 +51,8 @@ When ``HAREM_GLM47_FAILCLOSED`` != "0":
         present in them;
       * every argument key is identifier-shaped and, when the tool has a
         schema, present in its ``properties``;
+      * every key in the tool's ``parameters.required`` is present in the
+        parsed arguments (``HAREM_GLM47_REQUIRED``, default ON, see below);
       * a non-empty argument body that the converter extracted *nothing*
         usable from counts as truncated.
     A call that never closes is validated at finish and fails as truncated.
@@ -71,11 +73,25 @@ ENV GATE -- DEFAULT ON
 Unlike the other HAREM patches the default is ON, because the upstream default
 is the bug: an unset knob on a fresh node must be the safe one.
 
+REQUIRED-FIELD GATE -- DEFAULT ON, UNDER THE ONE ABOVE
+------------------------------------------------------
+  HAREM_GLM47_REQUIRED unset or 1 -> missing required keys are rejected.
+  HAREM_GLM47_REQUIRED=0          -> keys are shape/schema-checked only.
+
+Added 11 September 2026, NOT IN PRODUCTION yet (pending A/B + gates).  In the
+issue #7 gate run the *client* schema-rejected a salvaged call for a missing
+required key at 35k tokens -- the parser had already let it through, because
+``properties`` membership says nothing about what the schema demands.  The check
+is presence of the key only: a key whose value is an empty string passes, since
+an empty string is a legal value for a ``"type": "string"`` parameter and the
+tool, not the parser, owns that judgement.  It never runs when
+``HAREM_GLM47_FAILCLOSED=0``, because no validation runs at all there.
+
 LOGGING
 -------
 One line at import::
 
-    [HAREM-GLM47-FAILCLOSED] failclosed=True (HAREM_GLM47_FAILCLOSED='')
+    [HAREM-GLM47-FAILCLOSED] failclosed=True (HAREM_GLM47_FAILCLOSED='') required=True (HAREM_GLM47_REQUIRED='')
 
 and one warning per rejected call (name, truncated to 48 chars, plus the
 reason).  The argument body is never logged -- it is user content.
@@ -146,9 +162,20 @@ def _harem_failclosed() -> bool:
     return os.environ.get("HAREM_GLM47_FAILCLOSED", "1").strip() != "0"
 
 
+def _harem_required() -> bool:
+    """True unless HAREM_GLM47_REQUIRED is explicitly "0".
+
+    Sub-gate of _harem_failclosed: when that one is off no validation runs at
+    all, so this knob only ever narrows the fail-closed arm.
+    """
+    return os.environ.get("HAREM_GLM47_REQUIRED", "1").strip() != "0"
+
+
 print(
     f"[{MARK}] failclosed={_harem_failclosed()} "
-    f"(HAREM_GLM47_FAILCLOSED={os.environ.get('HAREM_GLM47_FAILCLOSED', '')!r})",
+    f"(HAREM_GLM47_FAILCLOSED={os.environ.get('HAREM_GLM47_FAILCLOSED', '')!r}) "
+    f"required={_harem_required()} "
+    f"(HAREM_GLM47_REQUIRED={os.environ.get('HAREM_GLM47_REQUIRED', '')!r})",
     flush=True,
 )
 '''.replace("{MARK}", MARK)
@@ -190,6 +217,8 @@ A6_OLD = """        kwargs.setdefault(
 A6_NEW = '''        # HAREM-GLM47-FAILCLOSED.  Set before super().__init__ so the
         # overrides below are safe from the first event onwards.
         self._harem_failclosed = _harem_failclosed()
+        # Sub-gate, read once per request parser like the one above.
+        self._harem_required = _harem_required()
         self._harem_closed: set[int] = set()
         self._harem_reject_text: list[str] = []
         kwargs.setdefault(
@@ -243,8 +272,15 @@ A6_NEW = '''        # HAREM-GLM47-FAILCLOSED.  Set before super().__init__ so th
         if self._tools and not find_tool_name(self._tools, name):
             return "tool name is not in the request tools"
 
+        # HAREM_GLM47_REQUIRED.  Key names come from the request's own schema,
+        # never from model output, so they are safe to name in the reason.
+        required = self._harem_required_keys(name) if self._harem_required else set()
+
         if not raw_args.strip():
-            return None  # a no-argument call is legal
+            # A no-argument call is legal -- unless the schema demands keys.
+            if required:
+                return "missing required key(s): " + ", ".join(sorted(required))
+            return None
 
         converter = self._arg_converter
         try:
@@ -263,7 +299,46 @@ A6_NEW = '''        # HAREM-GLM47-FAILCLOSED.  Set before super().__init__ so th
                 return f"argument key is not identifier-shaped ({len(key)} chars)"
             if properties and key not in properties:
                 return "argument key is not in the tool schema"
+
+        missing = sorted(required - set(parsed))
+        if missing:
+            return "missing required key(s): " + ", ".join(missing)
         return None
+
+    def _harem_required_keys(self, name: str) -> set[str]:
+        """The named tool's ``parameters.required``, or an empty set.
+
+        find_tool_properties returns only ``properties``, so walk the request's
+        tools here.  Every hop accepts a pydantic object OR a plain dict: the
+        OpenAI entrypoint hands us ChatCompletionToolsParam, while MCP and
+        test paths hand us raw dicts, and a malformed schema must read as "no
+        required keys" rather than raise inside the parser.
+        """
+        for tool in self._tools or ():
+            fn = (
+                tool.get("function") if isinstance(tool, dict)
+                else getattr(tool, "function", None)
+            )
+            if fn is None:
+                continue
+            fn_name = (
+                fn.get("name") if isinstance(fn, dict)
+                else getattr(fn, "name", None)
+            )
+            if fn_name != name:
+                continue
+            params = (
+                fn.get("parameters") if isinstance(fn, dict)
+                else getattr(fn, "parameters", None)
+            )
+            required = (
+                params.get("required") if isinstance(params, dict)
+                else getattr(params, "required", None)
+            )
+            if isinstance(required, (list, tuple, set)):
+                return {k for k in required if isinstance(k, str) and k}
+            return set()
+        return set()
 
     def _harem_reject(self, idx: int, reason: str, closer: str) -> None:
         """Surface the raw tool-call text as content and clear the slot."""

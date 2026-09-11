@@ -1675,6 +1675,27 @@ call re-enters the history. `HAREM_GLM47_FAILCLOSED`, default **on**, `=0` upstr
 [`../tracks/tp3/patches/glm47-failclosed/`](../tracks/tp3/patches/glm47-failclosed/README.md), gates
 [`../results/gates/failclosed-11sep.md`](../results/gates/failclosed-11sep.md).
 
+**Required-field validation — written 11 September, NOT YET IN PRODUCTION (pending A/B and gates).**
+The validation above checks that every argument key *exists* in the tool's `properties`; it says nothing
+about the keys the schema *demands*. In YuXiaoPan's own gate run (issue #7) the **client** schema-rejected
+a salvaged call at ~35k tokens for a **missing required key** — neither their variant nor ours caught it,
+because `properties` membership and `required` membership are different questions. The addition reads the
+tool's `parameters.required` out of the request (`find_tool_properties` returns only `properties`, so a
+small helper walks `self._tools`, accepting a pydantic tool object or a plain dict at every hop, and a
+malformed schema reads as "no required keys" rather than raising inside the parser) and rejects a call
+whose parsed arguments are missing any of them — including a call that carries **no** arguments at all
+against a schema that demands some. Reason line: `missing required key(s): content, file_path`, sorted,
+and safe to log because those names come from the request's schema, never from model output. **Presence is
+the test, not truthiness:** a required key whose value is an empty string passes, since an empty string is
+a legal value for a `"type": "string"` parameter and the tool, not the parser, owns that judgement. Knob:
+`HAREM_GLM47_REQUIRED`, default **on**, `=0` leaves the pre-required behaviour, and it is a sub-gate — it
+never runs under `HAREM_GLM47_FAILCLOSED=0`, where no validation runs at all. The boot line grows a second
+pair, and the `[HAREM-GLM47-FAILCLOSED]` prefix is unchanged:
+`… failclosed=True (HAREM_GLM47_FAILCLOSED='') required=True (HAREM_GLM47_REQUIRED='')`. The risk to
+measure in the gate before adoption is the mirror image of the bug: a client that marks fields `required`
+more loosely than it enforces them would see **correct** calls refused, so the gate must count rejections
+by reason, not just count rejections.
+
 **How to verify it on your own engine.** Three checks, in increasing order of effort:
 
 - The boot log carries `[HAREM-GLM47-FAILCLOSED] failclosed=True (HAREM_GLM47_FAILCLOSED='')` once per
@@ -1699,6 +1720,92 @@ consequence — see [11](11-open-issues.md) §2.30, where whether the 4bpw EXL3 
 against the NVFP4 sibling is still varying with the build. The gate that would catch this class before a
 user does is [HELP-WANTED](../HELP-WANTED.md) §14, which now wants a **tool-call** transcript as well as a
 text one.
+
+---
+
+### 9.14 XGrammar logs 776 `ERROR`s in eleven hours and every request was correct **[NOISE]**
+
+**Track:** both — it is upstream behaviour in the pinned vLLM, not a rank or checkpoint property. It
+needs **structured output plus speculative decoding** to appear, so a stack without a drafter will
+never see it.
+
+**Symptom.** With any structured output active the engine log fills with
+
+```
+ERROR [backend_xgrammar.py:166] Failed to advance FSM for request <id> for tokens <t>. Please file an issue.
+[.../cpp/grammar_matcher.cc:612: Warning: The matcher has terminated after accepting the stop token, but is trying to accept new token with id <t>.
+```
+
+and **every one of those requests returns a correct, schema-valid answer.** Measured here on one
+11-hour production boot (11 September, 08:50–19:06 local): **776 `ERROR` lines and 872
+`grammar_matcher` warnings across 102 distinct requests — and zero other `ERROR` lines in the whole
+log.** Independently reported by YuXiaoPan on a two-node stack (issue #7) at 11 and 46.
+
+**Why it is on this page.** The line says `Please file an issue` and prints at `ERROR`, so every
+operator who greps their log for `ERROR` finds it, and a monitor that alerts on `ERROR` alerts
+continuously. It is worth stating plainly: **this one is noise, and the only thing it costs you is
+the ability to see a real error.** In our log it was 100 % of the `ERROR` volume. It also costs a
+little wasted matcher work per speculative step.
+
+**Mechanism.** Two upstream bugs, both fixed after our pin and both needing a drafter to fire:
+
+1. **A draft batch is fed past the grammar's terminal token.** `XgrammarGrammar.accept_tokens`
+   advanced the matcher through the *whole* batch of speculative tokens and only then asked whether
+   the grammar had terminated. With `k=7` the batch routinely contains tokens after the stop token,
+   the matcher rejects them — that is the `grammar_matcher.cc:612` warning, verbatim — and the
+   rejection surfaces as the `ERROR`. A **terminated** grammar also answered `accept_tokens` with
+   `False`, which the caller reads as failure rather than "nothing left to do". And `reset()` cleared
+   `num_processed_tokens` but not `_is_terminated`, so a reused grammar object stayed terminated for
+   the rest of its life.
+2. **Drafts after the reasoning-end marker are probed by advancing.** When reasoning ends mid-window,
+   the drafts after `</think>` predate the bitmask and are not guaranteed grammar-valid. Upstream
+   *advanced* the matcher with them and deliberately tolerated the rejection — but `accept_token` had
+   already logged the `ERROR` by the time the caller swallowed it. Our production parser is
+   `deepseek_r1` and GLM-5.3-Flash's template forces thinking on, so this path runs on nearly every
+   turn.
+
+**Fix, and it is upstream's.** Backport
+[#52805](https://github.com/vllm-project/vllm/pull/52805) (merge
+`12f64b39d29282437e35be9aa5db432fb2a1a6e6`) and
+[#53046](https://github.com/vllm-project/vllm/pull/53046) (merge
+`c6e19b3be24338759a443e03c8325d76da9ee202`): stop the batch at termination, answer `True` for a
+terminated grammar, clear `_is_terminated` on `reset()`, and probe the post-marker drafts with
+`validate_tokens` (which rolls back) before advancing. If your build is newer than 2026-08-21 you
+already have both and this section does not apply to you.
+
+For a pinned build like ours the patch is
+[`tracks/tp3/patches/xgrammar-backports/`](../tracks/tp3/patches/xgrammar-backports/README.md) —
+anchor-based, idempotent, six anchors across the two files, `HAREM_XGRAMMAR_BACKPORT=0` restores the
+pre-backport behaviour exactly without unpatching. It goes in the prelude immediately after
+`patch-glm47-failclosed-tp3.py`, and two log lines prove it ran:
+
+```
+[HAREM-XGRAMMAR-BACKPORT] backend_xgrammar enabled=True (HAREM_XGRAMMAR_BACKPORT='')
+[HAREM-XGRAMMAR-BACKPORT] structured_output enabled=True (HAREM_XGRAMMAR_BACKPORT='')
+```
+
+**Result, measured here (11 September, 19:18 boot).** The same strict tool-call protocol that
+produced the 776 — `scripts/strict-proxy.py` in front of the engine, `scripts/toolcall-gate.py` at
+4 sessions × 30 turns, concurrency 2, `--max-prompt-tokens 120000`, effort low:
+
+| | before (11 h boot, 102 requests) | after (120-turn strict window) |
+|---|---|---|
+| `Failed to advance FSM` **ERROR** | **776** | **0** |
+| `grammar_matcher` warnings | **872** | **0** |
+| total `ERROR` lines in the boot | 776 | **0** |
+| turns / tool calls / well-formed | — | 120 / 132 / **132** |
+| rejected · out-of-schema · JSON error · empty · repeat · `length` | — | 0 · 0 · 0 · 0 · 0 · 0 |
+| sessions reaching corruption | — | **0 / 4** |
+| KV pool | 7,063,360 | **7,063,360** (unchanged) |
+
+Correctness probe **10/10** (content-only 9/9, empty-content requests **0**) and code exam
+**12/12**. Nothing here is a speed measurement: neither hunk touches a compute path, and none was
+read as evidence. `[measured-here]`
+
+**What it does not fix.** The grammar still only activates for `tool_choice="auto"` when a tool
+carries `strict: true` ([`results/gates/toolcall-gate-11sep-strict.md`](../results/gates/toolcall-gate-11sep-strict.md)),
+and the structural tag still excludes `</think>` in a way that can strand the thinking channel on
+text answers (issue #7, YuXiaoPan, open). This section is about the log, not about those.
 
 ---
 
@@ -1936,6 +2043,7 @@ one.**
 | 19 | The AOT compile check | 18/18 "pass", 6/18 die at launch | 7.3 |
 | 20 | The sibling's systemd unit | a reboot brings up the wrong engine on the same GPUs, healthily | 10.1 |
 | 21 | The salvaged malformed tool call | the client echoes it back, the model imitates it, and the session ends in empty turns reported as complete | 9.13 |
+| 22 | 776 `ERROR`s that mean nothing | XGrammar shouts `Please file an issue` on every speculative step past a terminated grammar, while every answer is correct — and it was 100 % of our `ERROR` volume | 9.14 |
 
 ---
 
