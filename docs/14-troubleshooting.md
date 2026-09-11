@@ -1620,6 +1620,80 @@ repository moves: every benchmark here is single-turn, where the flag is a no-op
 
 ---
 
+### 9.13 Malformed tool-call cascade — the parser salvages one bad call and the session ends in empty turns **[SILENT]**
+
+**Track:** both — it is a parser default in the pinned vLLM, not a rank or a checkpoint property. It
+needs agentic traffic to appear at all.
+
+**Symptom, in the order users report it.** Long agentic coding sessions degrade and then stop: a tool
+call that "stops halfway"; arguments with **missing or impossible keys**, so the client schema-rejects
+them; the **same call repeated** identically two or three turns running; file paths and commands that
+come back **mangled**; and finally a turn that is **completely empty** — the client says the turn
+completed, and nothing happened. The engine log shows HTTP 200 and no parser error. In the captured
+case 406 tokens were generated and **zero deltas reached the client**: one empty assistant role chunk,
+`finish_reason=stop`, `stop_reason` 154829 (`<|observation|>`), usage, done. It gets worse **within** a
+session, and no gate in this repository can see it, because every gate here is single-turn.
+
+**Mechanism, and it is YuXiaoPan's (issue #7).** Four upstream lines in `vllm/parser/glm47_moe.py`
+make a loop out of one rare event:
+
+1. At ~60k+ tokens of agentic context the model occasionally **loses its own tool-call format** and
+   emits malformed XML — including, in the captured vectors, Anthropic-style `</invoke>` and
+   `<parameter name=` fragments, i.e. format loss rather than a typo.
+2. `_glm47_arg_converter` (`glm47_moe.py:56-70`) **salvages** whatever its regexes match into a JSON
+   dict and validates **nothing** about the keys — a real captured key is
+   `print_code_snapshot</arg_value><arg_key>description`. Tool *names* are checked
+   (`validate_tool_names=True`, `glm47_moe.py:171`) and `_is_valid_tool_name`
+   (`parser_engine.py:392-397`) returns True unconditionally when the request carries no tools;
+   argument keys are never checked. `stream_arg_deltas=True` (`glm47_moe.py:169`) has already streamed
+   the fragments out, and `_build_extracted_result` (`parser_engine.py:1014-1065`) turns even a call
+   that never closed into a tool call.
+3. The client executes or schema-rejects it and **echoes the assistant message back into the history**,
+   garbage `tool_calls` JSON included, which is what every agent framework does.
+4. The chat template re-renders that garbage in canonical `<arg_key>` syntax — so the model is now
+   reading **its own corruption as an in-context example**, and imitates it. Each round is worse until
+   nothing parses and the whole turn is swallowed.
+
+**How it was established, and the method is the transferable part.** A logging proxy in front of the API
+caught the failing turn live, and the captured request body was then replayed **raw**: `/tokenize` on the
+exact messages and tools, then `/v1/completions` on those token ids — no chat template, no parsers, so
+nothing downstream of the model could be blamed or credited. That replay gave 5/5 corrupted calls at the
+failing state, and then eliminated three explanations in turn: **not** the prefix cache (system message
+salted, 0 % hits, still corrupted), **not** temperature (4/5, 4/5, 5/5 at 1.0 / 0.6 / 0.2 — deterministic
+near zero, i.e. context-driven), and **not** depth as such (truncate the history to just before the first
+corrupted call in it — 39 messages, 59.6k tokens — and the same model gives 8/8 well-formed calls at
+temperature 1.0). A reproducible replay plus three eliminations is what turned "the model sometimes stops"
+into a mechanism.
+
+**The fix, in production since 11 September 2026.** A prelude patch makes the parser **fail closed**:
+`stream_arg_deltas` off so a call is buffered until it closes; at `TOOL_CALL_END` the complete call is
+validated (name identifier-shaped and in the request's tools; every argument key identifier-shaped and in
+the tool's schema `properties`; a non-empty body the converter salvaged nothing from counts as truncated);
+and a call that fails is surfaced as plain **content** with its slot cleared, so neither the streaming path
+nor `_build_extracted_result` can emit it. **The cascade breaks at step 3** — nothing that looks like a tool
+call re-enters the history. `HAREM_GLM47_FAILCLOSED`, default **on**, `=0` upstream byte for byte:
+[`../tracks/tp3/patches/glm47-failclosed/`](../tracks/tp3/patches/glm47-failclosed/README.md), gates
+[`../results/gates/failclosed-11sep.md`](../results/gates/failclosed-11sep.md).
+
+**How to verify it on your own engine.** Three checks, in increasing order of effort:
+
+- The boot log carries `[HAREM-GLM47-FAILCLOSED] failclosed=True (HAREM_GLM47_FAILCLOSED='')` once per
+  process. **No line means the patch did not run** — almost always a missing `--in-place`, which makes
+  the script a dry run that exits 0.
+- A rejected call appears in the response as **raw `<tool_call>…</tool_call>` text inside `content`**,
+  with one warning line in the API log naming the tool and the reason (never the argument body — that is
+  user content). Garbage you can see is the working state; an empty turn was the broken one.
+- A valid streaming tool call now arrives as **one** `tool_call` delta rather than a name delta plus
+  argument deltas. That is the intended behaviour change and the one thing a client might notice.
+
+**What is still open.** The patch does not touch the **rate** of the first corruption, only its
+consequence — see [11](11-open-issues.md) §2.30, where whether the 4bpw EXL3 checkpoint raises that rate
+against the NVFP4 sibling is still varying with the build. The gate that would catch this class before a
+user does is [HELP-WANTED](../HELP-WANTED.md) §14, which now wants a **tool-call** transcript as well as a
+text one.
+
+---
+
 ## 10. Operations
 
 ### 10.1 A reboot brings up the sibling NVFP4 engine, not this one **[SILENT]**
@@ -1853,6 +1927,7 @@ one.**
 | 18 | `git archive` dropping the untracked Dockerfile | the build fails later, on a missing file | 2.19 |
 | 19 | The AOT compile check | 18/18 "pass", 6/18 die at launch | 7.3 |
 | 20 | The sibling's systemd unit | a reboot brings up the wrong engine on the same GPUs, healthily | 10.1 |
+| 21 | The salvaged malformed tool call | the client echoes it back, the model imitates it, and the session ends in empty turns reported as complete | 9.13 |
 
 ---
 

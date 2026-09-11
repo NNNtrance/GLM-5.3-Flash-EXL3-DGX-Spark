@@ -235,6 +235,35 @@ fi
 run python3 "$TP3_DIR/patch-flashkda-tp3.py" \
     --root "$(dirname "$VLLM_PY")" --in-place
 
+# --- Fail-closed glm47 tool-call parser (11 September 2026, issue #7) ---------
+# Applied UNCONDITIONALLY; the BEHAVIOUR is env-gated and, uniquely in this file,
+# default ON -- because here the upstream default IS the bug.
+#   HAREM_GLM47_FAILCLOSED unset / 1 -> a tool call is buffered until it closes,
+#                                    then validated (name in the request's tools,
+#                                    every arg key in the tool's schema, a body
+#                                    the converter salvaged nothing from counts
+#                                    as truncated); an invalid call is surfaced
+#                                    as plain CONTENT, never as a tool call, so
+#                                    no malformed call re-enters the history.
+#   HAREM_GLM47_FAILCLOSED=0         -> upstream behaviour, byte for byte (every
+#                                    override returns super(), stream_arg_deltas
+#                                    back to True).
+# Printed once per process as
+#   [HAREM-GLM47-FAILCLOSED] failclosed=True|False (HAREM_GLM47_FAILCLOSED='...')
+# A boot log with no such line is a boot where this patch did not run.
+# ORDER is immaterial: the only file it touches is vllm/parser/glm47_moe.py, which
+# no other arm here edits. It sits after FlashKDA because that is where it was
+# measured and gated.
+# THE SAME TWO THINGS ABOUT THIS LINE as the FlashKDA one above, for the same
+# reasons: --root is the DIST-PACKAGES root (this script's REL starts with
+# "vllm/"), and without --in-place it is a DRY RUN that prints "dry run OK",
+# exits 0 and patches nothing.
+# Same fail-closed `run` wrapper as every arm above.
+# Design, the cascade it ends and the sidecar consequence:
+# patches/glm47-failclosed/README.md and results/gates/failclosed-11sep.md.
+run python3 "$TP3_DIR/patch-glm47-failclosed-tp3.py" \
+    --root "$(dirname "$VLLM_PY")" --in-place
+
 # --- Vision tower -------------------------------------------------------------
 # Production configuration 13 also runs the vision block, which is kept beside
 # its own patch and gates rather than inlined here: paste

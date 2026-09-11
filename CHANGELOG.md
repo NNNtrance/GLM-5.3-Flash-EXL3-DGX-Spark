@@ -11,6 +11,52 @@ rounds, which is what the persisted MLA tuner cache bought — see
 
 ---
 
+## 11 September 2026 — issue #7: the malformed tool-call cascade, and a fail-closed glm47 parser in production
+
+**The third and last mechanism of issue #1 is closed, and it was not ours to find.** YuXiaoPan caught
+the residual "premature end-of-turn" on agentic traffic live behind a logging proxy and root-caused it
+by replaying the captured request body raw — `/tokenize` on the exact messages and tools, then
+`/v1/completions` on those token ids, no chat template and no parsers. At ~60k+ tokens of agentic
+context GLM-5.3-Flash occasionally loses its own tool-call format; `_glm47_arg_converter`
+(`vllm/parser/glm47_moe.py:56-70`) then **salvages** the malformed XML into a real `tool_calls` entry
+without validating a single argument key, the client echoes that garbage back into the history, the
+chat template re-renders it in canonical `<arg_key>` syntax, and the model imitates its own corruption
+until nothing parses and the whole turn is swallowed — empty stream, `finish_reason=stop` at
+`<|observation|>`, client shows "turn complete". Their replay also eliminated the prefix cache,
+temperature and context depth as explanations, in that order.
+
+**The fix is in production as of this morning** (`HAREM_GLM47_FAILCLOSED`, and it is **the one knob in
+this stack whose default is ON**, because here the upstream default is the bug):
+[`tracks/tp3/patches/glm47-failclosed/`](tracks/tp3/patches/glm47-failclosed/README.md) — one file, six
+anchors in `glm47_moe.py`. A tool call is buffered until it closes; at `TOOL_CALL_END` the complete call
+is validated (name identifier-shaped and in the request's tools, every argument key identifier-shaped
+and in the tool's schema `properties`, a non-empty body the converter salvaged nothing from counts as
+truncated); a call that fails is surfaced as plain **content** — the raw `<tool_call>…</tool_call>` text
+— with its slot cleared, so neither the streaming path nor `_build_extracted_result` can emit it.
+**The cascade breaks at its first link**: nothing that looks like a tool call re-enters the history.
+`=0` restores upstream byte for byte, and `test_failclosed.py` proves it by reproducing the bug —
+**37/37** model-free checks inside the image, against the corruption vectors captured in the issue.
+
+**Gates after adoption** ([`results/gates/failclosed-11sep.md`](results/gates/failclosed-11sep.md)):
+probe **10/10** (content-only 9/9, requests with empty content **0**), code exam **12/12**,
+needle-lite6 **6/6**, vision **PASS**. Valid tool calls were checked on both paths: non-streaming
+unchanged, and a streaming call now arrives as **one** `tool_call` delta instead of a name delta plus
+argument deltas — a visible API behaviour change, and the price of not half-streaming a call that turns
+out to be garbage. Registering the patch invalidated every fast-load sidecar again, so adoption cost one
+`FASTLOAD_MODE=dump` boot of **380 s** into a new directory ([docs/08](docs/08-fast-boot.md) §4,
+[docs/14](docs/14-troubleshooting.md) §10.6); the FlashKDA sidecar is kept as the way back.
+
+**What this does not fix, and we are saying it in both places.** The patch cannot change the **rate** at
+which the model writes a first malformed call — it is a parser change, downstream of generation. Whether
+the 4bpw EXL3 checkpoint raises that rate against the NVFP4 sibling is still the open measurement of
+[docs/11](docs/11-open-issues.md) §2.30, and issue #7's data cannot separate the build from the weights
+either. What changes is the stakes: a bad call now costs one visibly ugly turn instead of the session.
+New: [docs/14](docs/14-troubleshooting.md) §9.13 (silent-failure index row 21), a pointer at the end of
+docs/11 §2.30, and [HELP-WANTED](HELP-WANTED.md) §14 now asks for a **tool-call** variant of the
+multi-turn gate — jdecker76's PR #4 is text-only, and the tool call is this mechanism's whole carrier.
+
+---
+
 ## 11 September 2026 — issue #2 closed (chat template pinned), issue #6 closed (patch ordering + tail-row docstring), and a gate field fix
 
 **Issue #2 is closed.** The env examples now pin `CHAT_TEMPLATE_HOST` to a named revision instead of

@@ -1598,6 +1598,21 @@ reserve `low` for cost-sensitive, short-horizon clients**, with the price stated
 +90 % completion tokens and +24 % turn latency on the same scenarios. The build A/B remains the next
 step; jdecker76 has offered a same-cluster NVFP4 control arm, which would be the first symmetric one.
 
+**The third mechanism of issue #1 is now closed, and it points back here (11 September 2026).**
+YuXiaoPan root-caused the residual premature end-of-turn on agentic traffic: the model occasionally
+loses its tool-call format at ~60k+ tokens, the glm47 parser **salvages** the malformed XML instead of
+refusing it, the client echoes the salvaged garbage back into the history, and the model then imitates
+its own corruption until a whole turn is swallowed. The cascade is fixed — the parser fails closed as
+of this morning ([docs/14](14-troubleshooting.md) §9.13,
+[`../tracks/tp3/patches/glm47-failclosed/`](../tracks/tp3/patches/glm47-failclosed/README.md),
+[`../results/gates/failclosed-11sep.md`](../results/gates/failclosed-11sep.md)) — but **the rate of the
+first corruption is exactly this item**, and that patch cannot move it: it is a parser change,
+downstream of generation. Issue #7's replay data cannot separate the build from the weights either.
+What it does change is the stakes: a bad call now costs one ugly turn instead of the session, so a low
+rate becomes an adequate defence rather than a required one. If the build A/B above is ever run, the
+corrupted-calls-per-turn count on a replayed long agentic body — same request body, same temperature,
+two checkpoints — belongs in it as a second axis alongside tool-eval.
+
 ### 2.31 The vision tower is in production, and five things about it are not settled
 
 The tower ships ([18](18-vision-at-three-ranks.md), production configuration 13, 7 September 2026):

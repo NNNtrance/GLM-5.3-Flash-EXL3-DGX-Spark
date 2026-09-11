@@ -641,3 +641,25 @@ Also: PR #5, the `verify-chat-template.py` fingerprint script itself (merged as 
 pinned by revision in the tp2/tp3 env examples); and issue #6's report that `patch-kpooltail-tp3.py`
 and `patch-indexer-workspace-tp3.py` collide on `indexer.py`, answered by the Ordering note in
 [`patches/prefix-hit-and-kpool-tail/README.md`](tracks/tp3/patches/prefix-hit-and-kpool-tail/README.md#ordering).
+
+### YuXiaoPan — issue #7, the malformed tool-call cascade
+
+The third and last mechanism of issue #1, captured live and root-caused on their own three-node
+deployment of this recipe. A logging proxy in front of the API caught the empty turn — 406 tokens
+generated, zero deltas delivered, `finish_reason=stop` at `<|observation|>` — and the captured request
+body was then replayed **raw**, `/tokenize` on the exact messages and tools followed by
+`/v1/completions` on those token ids, so nothing downstream of the model could be blamed or credited.
+That instrument gave 5/5 reproduction at the failing state and then eliminated three explanations in
+order: the prefix cache (salted system message, 0 % hits, still corrupted), sampling temperature
+(deterministic corruption near zero), and depth as such (8/8 well-formed calls after truncating the
+history to just before its first corrupted call). It identified the four upstream lines that turn one
+rare malformed call into a session-ending loop — the unvalidated argument keys of
+`_glm47_arg_converter` above all — and **the design of the fail-closed fix, including the decision to
+surface a rejected call as plain content, is theirs.** We wrote the patch in
+[`patches/glm47-failclosed/`](tracks/tp3/patches/glm47-failclosed/README.md) against that design, its
+tests against their captured corruption vectors, and put it in production on 11 September 2026
+([docs/14](docs/14-troubleshooting.md) §9.13).
+
+Also, and it is the reason the item reads honestly: they said in the same issue what their data does
+**not** show — that the rate of the first corruption cannot be attributed to the checkpoint rather than
+the build, which is [docs/11](docs/11-open-issues.md) §2.30 and still open.

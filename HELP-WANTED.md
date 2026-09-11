@@ -627,10 +627,23 @@ but time.
 Every gate in this repository is single-turn at temperature 0. The three symptoms a production user
 reported after four days of real traffic (issue #1: looping, premature end-of-turn, a long-session
 quality drop) live only in long, warm, multi-turn sessions at sampling temperature. A stack can pass
-every gate here and still be rolled back by its users, and that is exactly what happened. Two of the
-three mechanisms are now understood ([docs/14](docs/14-troubleshooting.md) §9.12, and the K-pool tail
-fix in [`tracks/tp3/patches/prefix-hit-and-kpool-tail/`](tracks/tp3/patches/prefix-hit-and-kpool-tail/README.md));
-the gate that would have caught them does not exist yet.
+every gate here and still be rolled back by its users, and that is exactly what happened. **All three
+mechanisms are now understood** ([docs/14](docs/14-troubleshooting.md) §9.12; the K-pool tail fix in
+[`tracks/tp3/patches/prefix-hit-and-kpool-tail/`](tracks/tp3/patches/prefix-hit-and-kpool-tail/README.md);
+and, since 11 September, the malformed tool-call cascade of
+[docs/14](docs/14-troubleshooting.md) §9.13) — **and the gate that would have caught any of them still
+does not exist.** Every one was found by a user in production, which is the argument for building it.
+
+**It now needs two variants, and the tool-call one is the missing half.** jdecker76's **PR #4** is
+text-only, which covers retention and early stops but carries no tool calls at all — and the third
+mechanism's entire carrier is the tool call: the client echoing a *malformed* `tool_calls` entry back into the history is
+what teaches the model to imitate it. So the second variant replays a transcript whose turns **call
+tools**, echoes each assistant message back verbatim including its `tool_calls`, and adds a third
+assertion: (c) no turn's `tool_calls` carries an argument key outside the called tool's schema, and no
+turn arrives with empty `content`, no `tool_calls` and `finish_reason=stop`. On an engine with the
+fail-closed parser ([docs/14](docs/14-troubleshooting.md) §9.13) a rejected call shows up as raw `<tool_call>` text in `content`, which the
+same assertion can count. A replay fixture built from a real corrupted session is the one thing neither
+we nor issue #7 have published.
 
 What we would like: a replay of a 20-turn agentic transcript — tool calls, reasoning turns, the
 client echoing each assistant message back verbatim, as real clients do — against a warm prefix
