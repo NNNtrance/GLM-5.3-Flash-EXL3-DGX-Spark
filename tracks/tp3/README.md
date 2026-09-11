@@ -112,3 +112,16 @@ Four things in this repository exist only because three ranks is not two:
 
 Everything else on this stack — the image, the kernels, the fabric work, the KV pool surgery, the
 fast boot, the measurement protocol — belongs to both tracks.
+
+## Agentic context budget (read before pointing an agent at this endpoint)
+
+The 1M-token figure is a **retrieval** number (needle-in-a-haystack passes at 1M). It is not the coherent
+range for agentic sessions. Measured on this stack in September 2026 (our gates plus an independent
+3-node deployment reporting on issue #7): first malformed tool calls appear from roughly **36k tokens**
+of agentic history, the first behavioural loops around **70k**, and a full derailment was captured at
+**378k** (with the sparse-MLA indexer's top-k, each token attends to well under 1% of such a history).
+The healthy agentic range on this stack is roughly **50-80k tokens**; beyond ~100k is unmeasured
+territory. Practical consequences: keep worker sessions short (one stage of work per card), compress
+or reset well before 100k, cap completion tokens per request, and enable the structural-tag grammar
+(`strict: true` on tools) together with the fail-closed parser and the xgrammar backports
+(docs/14 §9.13-9.14) so that what *does* go wrong is refused rather than executed.
