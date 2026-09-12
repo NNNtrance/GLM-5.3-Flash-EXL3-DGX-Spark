@@ -1843,6 +1843,19 @@ same replay driven from request-level client captures rather than from a recorde
 its own corruption. Both are measurements, neither is a patch, and until one of them runs no line in
 this repository should attribute the residual to the checkpoint **or** to the engine.
 
+**Update, 12 September afternoon — candidate 2 is mostly struck.** The indexer-precision arm ran:
+the 12 indexer projection layers fed from the original **bf16** weights instead of the 4-bit EXL3 tensors
+gave 7 / 9 bad turns against the 11 / 7 baseline at `index_topk` 2048; an **exact** `torch.topk` in
+place of the histogram selectors (the vllm-project/vllm#51782 candidate-drop removed) gave 9 / 6; and
+forcing the first 16 and last 256 tokens into every selection gave 5 / 6. None approaches the 2 / 3 of
+the 8192 budget, and the failure species did not change
+([`../results/gates/index-topk-8192-12sep.md`](../results/gates/index-topk-8192-12sep.md) §10). What
+remains of candidate 2 is the **K-pool compression** alone (`index_kpool` 4 — four positions, one
+score), which could not be isolated because kpool 1 at a useful budget falls outside the kernels'
+accepted `select_k` set `[not tested]`. The working reading is therefore candidate 1 plus pooling: the
+literal sits too far back to win a 512-pool selection, whatever the scorer's precision. Status stays
+**OPEN** for the dense referee only.
+
 **The price is also open.** Short-prompt prefill fell 27 % on one instrument and per-turn prefill on the
 replay rose about 11 %; no concurrency sweep, TTFT series or acceptance reading was taken at 8192
 `[not tested]`, so production's speed characterisation is a configuration behind.

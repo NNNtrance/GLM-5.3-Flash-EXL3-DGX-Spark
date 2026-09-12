@@ -1896,9 +1896,15 @@ different model configuration`. Adoption cost one `FASTLOAD_MODE=dump` boot (abo
 changes the identity — a launcher override as much as a `patch-*.py` file — runs with `FASTLOAD_MODE`
 empty (§3.1, §10.6, and [08](08-fast-boot.md) §4).
 
-**Still open.** Whether the residual is GLM-5.3-Flash's own design limit at depth or the **precision**
-of this engine's indexer (fp8 indexer, K-pool compressing four positions into one score) is not
-separated by anything here, and a dense arm — the obvious referee — does not run. [11](11-open-issues.md) §2.36.
+**Still open, narrowed the same afternoon.** Three more arms at `index_topk` 2048 — an exact
+`torch.topk` selector in place of the histogram kernels (9 / 6 against the 11 / 7 baseline), the
+indexer's projection weights in bf16 instead of 4-bit (7 / 9), and the first 16 + last 256 tokens forced
+into every selection (5 / 6) — each left the defect in place, so neither selection accuracy nor scoring
+precision nor a guaranteed recent window is the lever; the budget is. Whether the residual is the
+checkpoint's design or the K-pool compression (four positions, one score) is still not separated — a
+dense arm does not run on this image, and kpool 1 at a useful budget falls outside the kernels' accepted
+widths. [`../results/gates/index-topk-8192-12sep.md`](../results/gates/index-topk-8192-12sep.md) §10,
+[11](11-open-issues.md) §2.36.
 
 ---
 

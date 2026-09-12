@@ -43,7 +43,7 @@ def one(i, url, args):
 if __name__ == "__main__":
     ap = argparse.ArgumentParser(); ap.add_argument("--tag", required=True); ap.add_argument("--top-p", type=float, default=0.95)
     ap.add_argument("--temperature", type=float, default=1.0); ap.add_argument("--concurrency", type=int, default=4)
-    ap.add_argument("--max-tokens", type=int, default=8192); ap.add_argument("--url", default="http://192.168.1.103:8001")
+    ap.add_argument("--max-tokens", type=int, default=8192); ap.add_argument("--url", default="http://localhost:8001")
     ap.add_argument("--out", default=".")
     args = ap.parse_args()
     out = pathlib.Path(args.out) / f"{args.tag}-p{args.top_p}.jsonl"

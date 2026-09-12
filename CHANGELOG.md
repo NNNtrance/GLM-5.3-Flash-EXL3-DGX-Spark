@@ -11,6 +11,18 @@ rounds, which is what the persisted MLA tuner cache bought — see
 
 ---
 
+## 12 September 2026 (afternoon) — three negative arms on the long-session corruption; production unchanged
+
+At `index_topk` 2048: exact `torch.topk` selection 9 / 6, bf16 indexer weights 7 / 9, forced sink +
+recent window 5 / 6 bad turns out of 30 (baseline 11 / 7; production 8192 stays at 2 / 3). Selection
+accuracy and scoring precision are struck as causes; the budget remains the only lever, the K-pool
+compression the only untested suspect. Every arm booted without a sidecar and was rolled back with
+gates re-probed; production is still the 8192 boot of the morning. A live multi-agent run of 591 tool
+calls at up to 114k tokens showed 0 corrupt arguments once two *client* settings were fixed (a
+history-trimming marker the model copied; a `medium` effort the template maps to `max`). See
+[`results/gates/index-topk-8192-12sep.md`](results/gates/index-topk-8192-12sep.md) §10,
+[docs/11](docs/11-open-issues.md) §2.36, [docs/14](docs/14-troubleshooting.md) §9.15.
+
 ## 12 September 2026 — the long-session tool-call corruption was the sparse-attention top-k: `index_topk` 2048 → 8192 in production
 
 **The last finding of issue #7 is closed, and it was not in any of the places we looked first.** In

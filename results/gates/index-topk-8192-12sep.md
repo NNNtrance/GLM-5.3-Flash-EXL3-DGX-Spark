@@ -231,3 +231,39 @@ Raw replay output, the per-arm drivers and the gate logs are **not in this repos
 request bodies from a live agent session, paths and prompts included); the per-turn scores and the
 tables above are the summary, and `scripts/toolcall-gate.py` plus `scripts/strict-proxy.py` reproduce
 the gate half of it on any stack.
+
+## 10. Three follow-up arms, same afternoon — none of them replaced the budget
+
+Section 9 left the residual's cause open: the model's design limit, or this engine's indexer precision.
+Three arms were run on the same 30-turn corpus, each with `index_topk` back at the checkpoint's **2048**
+so that a real fix would have to show against the 11 / 7 baseline rather than against the 2 / 3 of the
+wider budget. Every arm booted without a fast-load sidecar (`FASTLOAD_MODE` empty — a `patch-*.py` or a
+different overlay changes the identity), ran both replay arms, and was rolled back to the 8192 production
+boot with the gates re-probed.
+
+| arm (`index_topk` 2048) | what changed | fresh | session | verdict |
+|---|---|---|---|---|
+| baseline | nothing | **11** | **7** | — |
+| **exact top-k** | both indexer selection sites routed through `torch.topk` instead of the histogram/radix kernels, removing vllm-project/vllm#51782's candidate-drop from the picture; prefill 1,868 → 1,642 tok/s on the 7K probe | 9 | 6 | selection accuracy is **not** it |
+| **bf16 indexer** | the 12 lightning-indexer projection layers (`wq_b` and friends, 84 tensors, 172 MB) fed from the original bf16 weights instead of the 4-bit EXL3 tensors, indexer K cache unchanged | 7 | 9 | scoring-weight precision is **not** it |
+| **force-keep sink + recent** | the first 4 and the last 64 pooled positions (16 + 256 tokens) of every query row biased into the selection ahead of the kernel (the mlx-lm #1552 pattern for this attention family) | 5 | 6 | helps on the fresh arm, **does not** reach the 8192 row |
+| reference: `index_topk` **8192** | the production fix | **2** | **3** | adopted |
+
+The failures in all three arms are the same species as before — context prose spliced onto a path that
+began correctly, a one-character root slip, one runaway — so none of them changed *what* goes wrong,
+only how often. Reading: the literal that has to come back byte-exact sits far back in the history (a
+path typed twenty turns earlier), and neither a more exact selector, nor a more precise scorer, nor a
+guaranteed recent window brings *that* position into a 512-pool selection. The selection **budget** is
+the only lever with a monotone effect, and the kernel stops accepting it between 8192 and 16384 (§4).
+What these arms do not test is `index_kpool` itself — whether pooling four positions into one score is
+where the literal is lost — because the kernels take `select_k` only in {512, 1024, 2048} and kpool 1
+at any useful budget falls outside that set `[not tested]`.
+
+**A live reading, for scale.** After the 8192 boot, one multi-agent session of **591 tool calls**
+across three agent roles, reaching 34k tokens of context for the workers and 114k for the lead, produced
+**0 corrupt string arguments** — with two caveats that belong to the client and not to the engine: the
+same harness had first produced corrupt calls that all carried a literal `...[truncated]` marker copied
+from its own history-trimming feature (turned off), and a `medium` reasoning effort that this
+checkpoint's chat template silently maps to `max` (the template accepts only `low` and `high`), which
+ran the thinking to the output cap at 42k tokens. Both are harness settings, not engine defects; they
+are recorded here because a reader chasing "corruption" will meet them first.
