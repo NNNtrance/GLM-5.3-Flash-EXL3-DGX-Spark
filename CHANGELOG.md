@@ -11,11 +11,12 @@ rounds, which is what the persisted MLA tuner cache bought — see
 
 ---
 
-## 12 September 2026 (afternoon) — three negative arms on the long-session corruption; production unchanged
+## 12 September 2026 (afternoon) — four negative arms on the long-session corruption; production unchanged
 
 At `index_topk` 2048: exact `torch.topk` selection 9 / 6, bf16 indexer weights 7 / 9, forced sink +
-recent window 5 / 6 bad turns out of 30 (baseline 11 / 7; production 8192 stays at 2 / 3). Selection
-accuracy and scoring precision are struck as causes; the budget remains the only lever, the K-pool
+recent window 5 / 6, attention projections at the original fp8 precision 7 / 6 bad turns out of 30
+(baseline 11 / 7; production 8192 stays at 2 / 3). Selection accuracy, scoring precision and
+attention-weight precision are struck as causes; the budget remains the only lever, the K-pool
 compression the only untested suspect. Every arm booted without a sidecar and was rolled back with
 gates re-probed; production is still the 8192 boot of the morning. A live multi-agent run of 591 tool
 calls at up to 114k tokens showed 0 corrupt arguments once two *client* settings were fixed (a

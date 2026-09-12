@@ -1843,12 +1843,14 @@ same replay driven from request-level client captures rather than from a recorde
 its own corruption. Both are measurements, neither is a patch, and until one of them runs no line in
 this repository should attribute the residual to the checkpoint **or** to the engine.
 
-**Update, 12 September afternoon — candidate 2 is mostly struck.** The indexer-precision arm ran:
+**Update, 12 September afternoon — candidate 2 is struck (four arms).** The indexer-precision arm ran:
 the 12 indexer projection layers fed from the original **bf16** weights instead of the 4-bit EXL3 tensors
 gave 7 / 9 bad turns against the 11 / 7 baseline at `index_topk` 2048; an **exact** `torch.topk` in
 place of the histogram selectors (the vllm-project/vllm#51782 candidate-drop removed) gave 9 / 6; and
-forcing the first 16 and last 256 tokens into every selection gave 5 / 6. None approaches the 2 / 3 of
-the 8192 budget, and the failure species did not change
+forcing the first 16 and last 256 tokens into every selection gave 5 / 6; and the 11 sparse-attention
+layers' projections (`q_a`, `kv_a`, `q_b`, `o`) served at the checkpoint's original block-fp8 precision
+instead of 4-bit gave 7 / 6. None approaches the 2 / 3 of the 8192 budget, and the failure species did
+not change
 ([`../results/gates/index-topk-8192-12sep.md`](../results/gates/index-topk-8192-12sep.md) §10). What
 remains of candidate 2 is the **K-pool compression** alone (`index_kpool` 4 — four positions, one
 score), which could not be isolated because kpool 1 at a useful budget falls outside the kernels'

@@ -235,7 +235,7 @@ the gate half of it on any stack.
 ## 10. Three follow-up arms, same afternoon — none of them replaced the budget
 
 Section 9 left the residual's cause open: the model's design limit, or this engine's indexer precision.
-Three arms were run on the same 30-turn corpus, each with `index_topk` back at the checkpoint's **2048**
+Four arms were run on the same 30-turn corpus, each with `index_topk` back at the checkpoint's **2048**
 so that a real fix would have to show against the 11 / 7 baseline rather than against the 2 / 3 of the
 wider budget. Every arm booted without a fast-load sidecar (`FASTLOAD_MODE` empty — a `patch-*.py` or a
 different overlay changes the identity), ran both replay arms, and was rolled back to the 8192 production
@@ -247,13 +247,20 @@ boot with the gates re-probed.
 | **exact top-k** | both indexer selection sites routed through `torch.topk` instead of the histogram/radix kernels, removing vllm-project/vllm#51782's candidate-drop from the picture; prefill 1,868 → 1,642 tok/s on the 7K probe | 9 | 6 | selection accuracy is **not** it |
 | **bf16 indexer** | the 12 lightning-indexer projection layers (`wq_b` and friends, 84 tensors, 172 MB) fed from the original bf16 weights instead of the 4-bit EXL3 tensors, indexer K cache unchanged | 7 | 9 | scoring-weight precision is **not** it |
 | **force-keep sink + recent** | the first 4 and the last 64 pooled positions (16 + 256 tokens) of every query row biased into the selection ahead of the kernel (the mlx-lm #1552 pattern for this attention family) | 5 | 6 | helps on the fresh arm, **does not** reach the 8192 row |
+| **attention projections at the original precision** | the 11 sparse-attention layers' `q_a_proj`, `kv_a_proj_with_mqa`, `q_b_proj`, `o_proj` served from `zai-org/GLM-5.3-Flash`'s block-fp8 weights dequantised to bf16 (44 tensors, 2.3 GB) instead of the 4-bit EXL3 copy, loaded with a fail-closed 44/44 proof on every rank; KV pool −1 % | 7 | 6 | attention-weight precision is **not** it |
 | reference: `index_topk` **8192** | the production fix | **2** | **3** | adopted |
 
-The failures in all three arms are the same species as before — context prose spliced onto a path that
+The failures in all four arms are the same species as before — context prose spliced onto a path that
 began correctly, a one-character root slip, one runaway — so none of them changed *what* goes wrong,
 only how often. Reading: the literal that has to come back byte-exact sits far back in the history (a
 path typed twenty turns earlier), and neither a more exact selector, nor a more precise scorer, nor a
-guaranteed recent window brings *that* position into a 512-pool selection. The selection **budget** is
+guaranteed recent window, nor attention weights at the checkpoint's own precision brings *that*
+position into a 512-pool selection. The fourth arm also answers a report from production use of this
+recipe beside its NVFP4 sibling (issue #1: the sibling keeps the attention projections at the original
+precision and behaved better in long sessions): that difference does not move this defect, and every
+GLM-5.3-Flash checkpoint we could check — the original, `local-inference-lab/GLM-5.3-Flash-NVFP4`,
+`nvidia/GLM-5.3-Flash-NVFP4` — ships the same `index_topk` 2048 / `index_kpool` 4, so the same selection
+budget applies to the NVFP4 stacks; whether their users see it depends on what their sessions copy. The selection **budget** is
 the only lever with a monotone effect, and the kernel stops accepting it between 8192 and 16384 (§4).
 What these arms do not test is `index_kpool` itself — whether pooling four positions into one score is
 where the literal is lost — because the kernels take `select_k` only in {512, 1024, 2048} and kpool 1
