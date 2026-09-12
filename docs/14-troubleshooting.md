@@ -3,9 +3,9 @@
 **Applies to: both tracks.** Every entry carries its own **Track** line — see the third convention
 below.
 
-Eighty-seven entries, with the exact text where one exists. This page is the reason the rest of the
+Eighty-eight entries, with the exact text where one exists. This page is the reason the rest of the
 repository can be short: if you are stuck, the answer is probably here, and if it is not, the shape of
-the answer probably is. **Two of the eighty-seven are not failures we hit**, and each says so in its own
+the answer probably is. **Two of the eighty-eight are not failures we hit**, and each says so in its own
 heading: §9.8 is a corruption the code blocks before it can happen, and §9.9 is a hypothesis a
 measurement refuted before it cost us anything. They are counted and kept because this is where a
 reader will look for them.
@@ -29,7 +29,7 @@ understanding:
 | **TP=3 only** | It cannot happen at two ranks: it is about the padding, the padded load, or expert parallelism being mandatory |
 | **TP=2 only** | We only ever hit it at two ranks, and the entry says why three did not |
 
-Across the page, **45** entries are plain **both** and another **27** are both-but-measured-at-three
+Across the page, **45** entries are plain **both** and another **28** are both-but-measured-at-three
 ranks. That is a useful finding on its own: most of what goes wrong on this stack does not care how
 many nodes you have. Thirteen are TP=3 only and two are TP=2 only.
 
@@ -80,6 +80,7 @@ that mean nothing.** That is why correctness and memory come before timing.
 | `ValueError: could not find tensor_storage` | §2.17 |
 | `fatal error: cusolverDn.h: No such file or directory` | §2.21 |
 | `preflight-fastload: sidecar stale - boot refused` | §3.1, §10.6 |
+| `harem-fastload: sidecar was written for a different model configuration` | §3.1, §9.15 |
 | Container exits immediately, `Exited (21)` on all three nodes | §3.1 |
 | `fast-load sidecar missing: …` and all units `failed` before the container starts | §10.6 |
 | A boot log with no `[HAREM-FLASHKDA] kda_prefill_backend=` line | §10.6 |
@@ -91,11 +92,14 @@ that mean nothing.** That is why correctness and memory come before timing.
 | All-reduce collapses between 200 KB and 12 MB | §6.1 |
 | `exl3_moe_gemm: svh n mismatch` | §7.2 |
 | `OutOfResources: out of resource: shared memory, Required: 106496` | §7.3 |
+| `CUDA error: invalid argument` in worker init after raising `index_topk` | §9.15 |
+| `Selected backend CUSTOM is not valid: 'non-sparse not supported'` | §9.15 |
 | `min_reg_num < INT64_MAX is false` | §7.4 |
 | `CUDAGraphMode.FULL_AND_PIECEWISE is not supported with spec-decode` | §7.7 |
 | `POST /start_profile` returns 404 | §8.7 |
 | Three nodes slower than two | §7.1 |
 | Model serves and is confidently wrong | §2.10, §9 |
+| Tool-call path and string arguments mangled past ~32k of agentic context | §9.15, §9.13 |
 | Draft acceptance falls with no error | §9 (several) |
 
 ---
@@ -1717,7 +1721,9 @@ measurement, not a rate, and not a substitute for the gate below.
 
 **What is still open.** The patch does not touch the **rate** of the first corruption, only its
 consequence — see [11](11-open-issues.md) §2.30, where whether the 4bpw EXL3 checkpoint raises that rate
-against the NVFP4 sibling is still varying with the build. The gate that would catch this class before a
+against the NVFP4 sibling is still varying with the build. **Part of that rate was traced on
+12 September** and it was not the parser, the drafter or fp8 KV: it is the sparse indexer's selection
+width, §9.15. The gate that would catch this class before a
 user does is [HELP-WANTED](../HELP-WANTED.md) §14, which now wants a **tool-call** transcript as well as a
 text one.
 
@@ -1806,6 +1812,93 @@ read as evidence. `[measured-here]`
 carries `strict: true` ([`results/gates/toolcall-gate-11sep-strict.md`](../results/gates/toolcall-gate-11sep-strict.md)),
 and the structural tag still excludes `</think>` in a way that can strand the thinking channel on
 text answers (issue #7, YuXiaoPan, open). This section is about the log, not about those.
+
+---
+
+### 9.15 Tool-call arguments corrupt in long sessions (≳32k) — sparse-attention top-k **[SILENT]**
+
+**Track:** **both, measured at TP=3 only** — it is the checkpoint's sparse-MLA geometry plus this
+engine's indexer, and nothing in it knows the rank count. Expect it at two ranks; the numbers below
+are three-rank readings and the fix was never set there `[not tested]`.
+
+**Symptom.** In agentic sessions past roughly **32k prompt tokens** the prose stays fine and the
+**string arguments of tool calls** rot. In the captured sessions, in order of how often they appeared:
+a single character slips inside a path — `projeler` → `rojeler`, `depo` → `dego`, `projeler` →
+`prodeler`; context text is spliced onto the end of a path that began correctly; tool-call markup
+leaks into a value; and occasionally a generation runs away to `max_tokens`. HTTP 200, no parser
+error, no log line. Short context is **flawless**, which is what makes it expensive: on the unfixed
+engine the 11 September soak took 666/666 requests and 493/493 well-formed tool calls over 420 turns
+([`../results/soak-11sep.md`](../results/soak-11sep.md)), and every single-turn gate in this repository
+passes. Reported here as issue #7 ("corruption 36k+").
+
+**How it was diagnosed, and the method is the part to copy.** A recorded 100-message agent session is
+replayed turn by turn against the live engine — 30 turns, prompts 30k → 41k, the real system prompt
+and 25 tool schemas attached, `temperature 0.2`, effort low — and each turn's path arguments are
+scored. Two arms per configuration: a unique `cache_salt` per turn (full prefill) and a shared one
+(the production prefix-cache path). Then one thing at a time was removed from production, each in its
+own three-node restart. **Bad turns out of 30, fresh / session:**
+
+| arm | fresh | session | verdict |
+|---|---|---|---|
+| production, `index_topk` 2048 | **11** | **7** | baseline |
+| DFlash2 speculative decoding off | 12 | 10 | **not** it |
+| FlashKDA off | 8 | 7 | **not** it |
+| KV cache bf16 instead of fp8 | 10 | 8 | **not** it |
+| structural-tag grammar off | ≈9 | — | **not** it |
+| `index_topk` 4096 | 6 | 4 | about half |
+| **`index_topk` 8192** | **2** | **3** | adopted |
+
+So it is not speculative decoding, not the fused prefill kernel, not fp8 KV quantization, not the
+grammar, and not the parser — halving the KV pool did not touch it either. The replay corpus contains
+the original session's **own** corrupted calls, which the model imitates (§9.13 step 3), so the
+absolute rates are inflated and only the columns may be compared. That caveat is the reason this entry
+quotes a trend and not a rate.
+
+**Cause, as far as measurement reaches.** GLM-5.3-Flash runs DeepSeek-style sparse MLA: the lightning
+indexer selects `index_topk` = 2048 key positions, pooled `index_kpool` = 4 deep, so the per-row top-k
+is `index_topk / index_kpool` = 512. At that width a token deep in a 35k-token history attends to
+under 6 % of it, and what has to come back **byte-exact** is the hardest case for a lossy selection:
+near-duplicate path strings that differ by one character and recur dozens of times in the context.
+Widening the selection removes the corruption monotonically.
+
+**Fix, in production since 12 September 2026.** Add `index_topk` to the override the launcher already
+passes — one JSON object, **no spaces**, because `EXTRA_ARGS` is word-split:
+
+```
+--hf-overrides {"quantization_config_file":"/var/tmp/glm-5.3-flash-turboderp-4.05bpw-tp3/quantization_config.json","index_topk":8192}
+```
+
+Gates on the production boot: probe **10/10**, code exam **12/12**, needle-lite **6/6**, KV pool
+**7,033,057** (in band), and the strict tool-call gate **72 calls / 72 well-formed / 0 rejected / 0
+corrupt turns** to 31k. The replay's fresh arm came back **1/30** — one surviving root-directory slip,
+so this is a reduction and not a proof.
+[`../results/gates/index-topk-8192-12sep.md`](../results/gates/index-topk-8192-12sep.md).
+
+**What it costs, and it is the largest price any change in this stack has carried.** A 7K-prompt
+`scripts/prefill-7k.py` reading went **1,868 → 1,366 tok/s (−27 %)**; per-turn prefill on the 30–41k
+replay rose about **+11 %**; decode, KV pool and boot time did not move. The inference for the split —
+not a measurement `[not measured]` — is that a prefill chunk pays the wider top-k on 1,792 query rows
+at once where a decode step pays it on one. Budget it before you copy the flag: agentic sessions get
+their strings right and their first token slower.
+
+**Two limits you will hit if you go further, and both are hard.** `index_topk` **16384** and **65536**
+never reach serving — `CUDA error: invalid argument` during worker init, so the kernel limit is
+between 8192 and 16384 — and `index_topk: null` (dense MLA) is refused at backend selection with
+`Selected backend CUSTOM is not valid: 'non-sparse not supported'`, because the EXL3 attention backend
+implements the sparse path only. There is therefore **no dense reference on this image**, and that is
+why the open question below cannot be closed from here.
+
+**It is not an environment knob, and it costs a sidecar.** `index_topk` travels in `--hf-overrides`,
+and `hf_overrides` is part of the fast-load identity ([08](08-fast-boot.md) §4), so the first attempt
+with `FASTLOAD_MODE=load` was refused outright with `harem-fastload: sidecar was written for a
+different model configuration`. Adoption cost one `FASTLOAD_MODE=dump` boot (about 6 minutes) into a
+**new** directory and 53 GB per rank; `load` boots are 170 s again. Rule for experiments: anything that
+changes the identity — a launcher override as much as a `patch-*.py` file — runs with `FASTLOAD_MODE`
+empty (§3.1, §10.6, and [08](08-fast-boot.md) §4).
+
+**Still open.** Whether the residual is GLM-5.3-Flash's own design limit at depth or the **precision**
+of this engine's indexer (fp8 indexer, K-pool compressing four positions into one score) is not
+separated by anything here, and a dense arm — the obvious referee — does not run. [11](11-open-issues.md) §2.36.
 
 ---
 

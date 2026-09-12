@@ -1813,6 +1813,40 @@ the estimate is on record as having been wrong in our favour.
 [`../results/gates/flashkda-ab-10sep.md`](../results/gates/flashkda-ab-10sep.md) §5,
 [`../tracks/tp3/patches/flashkda/`](../tracks/tp3/patches/flashkda/README.md).
 
+### 2.36 Sparse-attention top-k at 8192 fixed the long-session corruption, and we cannot say what the residual is
+
+**OPEN, measured 12 September 2026.** Raising `index_topk` from the checkpoint's 2048 to **8192** took
+tool-call argument corruption in a 30-turn replay at 30–41k prompt tokens from 11 bad turns out of 30
+to **2**, monotonically through 4096 at 6 — while speculative decoding, the fused prefill kernel, fp8
+KV quantization and the structural-tag grammar were each removed in their own arm and each left the
+defect in place `[measured-here]`,
+[`../results/gates/index-topk-8192-12sep.md`](../results/gates/index-topk-8192-12sep.md). The fix is in
+production. The **cause of what remains** is not established, and there are two candidates that this
+cluster cannot separate:
+
+1. **The model's own design limit.** 2048 selected positions is what `zai-org/GLM-5.3-Flash` ships, and
+   at 35k of context that is under 6 % of the history. If byte-exact recall of near-duplicate strings
+   simply is not inside the sparse design, every stack running this checkpoint has the same ceiling and
+   only a client-side path guard helps.
+2. **Indexer precision in this engine.** The lightning indexer runs in fp8 and `index_kpool` 4
+   compresses four positions into one score, so the position carrying the literal can lose to a
+   neighbour for reasons that are ours and not the model's. That would make it a fixable engine defect
+   and a thing to report upstream rather than design around.
+
+**What would settle it, and why we cannot run it.** A dense arm is the obvious referee, and it does not
+exist on this image: `index_topk` 16384 and 65536 die in worker init with `CUDA error: invalid argument`
+(so the kernel limit is between 8192 and 16384), and `index_topk: null` is refused by the EXL3
+attention backend with `non-sparse not supported` — it implements the sparse-MLA path only
+([14](14-troubleshooting.md) §9.15). What is left from here is an **indexer-precision** arm — the same
+replay with the indexer scoring in bf16, and with `index_kpool` 1 if the kernels accept it — plus the
+same replay driven from request-level client captures rather than from a recorded history that carries
+its own corruption. Both are measurements, neither is a patch, and until one of them runs no line in
+this repository should attribute the residual to the checkpoint **or** to the engine.
+
+**The price is also open.** Short-prompt prefill fell 27 % on one instrument and per-turn prefill on the
+replay rose about 11 %; no concurrency sweep, TTFT series or acceptance reading was taken at 8192
+`[not tested]`, so production's speed characterisation is a configuration behind.
+
 ## 3. Never run
 
 | What | Why not |

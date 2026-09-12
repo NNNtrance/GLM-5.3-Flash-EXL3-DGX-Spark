@@ -11,6 +11,57 @@ rounds, which is what the persisted MLA tuner cache bought — see
 
 ---
 
+## 12 September 2026 — the long-session tool-call corruption was the sparse-attention top-k: `index_topk` 2048 → 8192 in production
+
+**The last finding of issue #7 is closed, and it was not in any of the places we looked first.** In
+agentic sessions past roughly **32k prompt tokens** the prose stayed fine while the **string arguments
+of tool calls** rotted: a single character slipping inside a path (`projeler` → `rojeler`, `depo` →
+`dego`), context text spliced onto the end of a path that began correctly, tool-call markup leaking into
+a value, occasionally a generation running away to `max_tokens`. HTTP 200, no parser error, no log line,
+and **every single-turn gate in this repository passing** — the 11 September soak took 666/666 requests
+and 493/493 well-formed tool calls on the unfixed engine.
+
+**How it was found.** A recorded 100-message agent session replayed turn by turn against the live engine
+— 30 turns, prompts 30k → 41k, the real system prompt and 25 tool schemas, `temperature 0.2`, effort low
+— scoring each turn's path arguments, in two arms (unique `cache_salt` per turn = full prefill, shared
+`cache_salt` = the production prefix-cache path). Then one thing removed per three-node restart. **Bad
+turns out of 30, fresh / session:** production `index_topk` 2048 **11 / 7**; DFlash2 speculative decoding
+off 12 / 10; FlashKDA off 8 / 7; KV cache bf16 instead of fp8 10 / 8 (pool halved to 3,640,901); the
+structural-tag grammar off ≈9. None of those is the cause. `index_topk` **4096 → 6 / 4** and **8192 →
+2 / 3**, and the final production boot's fresh arm read **1 / 30**. The replay corpus carries the
+original session's own corrupted calls, which the model imitates, so the absolute rates are inflated and
+**only the columns may be compared** — the conclusion rests on the monotone ladder, not on any one cell.
+
+**The change is one key in an argument we already passed**, `--hf-overrides` now reading
+`{"quantization_config_file":"…","index_topk":8192}` — one object, no spaces. GLM-5.3-Flash's sparse MLA
+selects `index_topk` positions pooled `index_kpool` 4 deep, so the per-row top-k went 512 → 2048;
+byte-exact recall of near-duplicate path strings deep in a session is the hardest case for a lossy
+selection, and widening it removes the corruption monotonically. **Whether the residual is the
+checkpoint's own design limit or this engine's indexer precision (fp8 indexer, K-pool compression) is
+open** — a dense reference would settle it and does not exist on this image: `index_topk` 16384 and
+65536 die in worker init with `CUDA error: invalid argument`, and `index_topk: null` is refused by the
+EXL3 attention backend with `non-sparse not supported`. [docs/11](docs/11-open-issues.md) §2.36.
+
+**Gates on the production boot** (`load` mode, 170 s,
+[`results/gates/index-topk-8192-12sep.md`](results/gates/index-topk-8192-12sep.md)): probe **10/10**
+(content-only 9/9, empty-content requests 0), code exam **12/12**, needle-lite **6/6**, KV pool
+**7,033,057** tokens (in band, −0.3 %), and the strict tool-call gate through `strict-proxy.py` —
+the production client path — at **72 calls / 72 well-formed / 0 rejected / 0 out-of-schema / 0 empty /
+0 corrupt turns** to 31k. The same gate **without** `strict` left tool-call markup in **7 of 61** calls
+for the fail-closed parser to refuse, so the structural-tag grammar stays required in production.
+
+**What it cost, said plainly: this is the largest price any change in this stack has carried.** A
+7K-prompt `scripts/prefill-7k.py` reading went **1,868 → 1,366 tok/s, −27 %**; per-turn prefill on the
+30–41k replay rose about **+11 %**, which is the figure to plan agentic sessions with; decode
+(3.4 s/turn on the session arm), KV pool and boot time did not move, and no gate regressed. The two
+prefill figures come from different instruments ([docs/10](docs/10-results-and-roofline.md) §1), and the
+concurrency sweep, TTFT series and acceptance reading were **not** re-run `[not tested]` — `audit/`'s
+prefill band now says so. Adoption cost one `FASTLOAD_MODE=dump` boot of about 6 minutes and a fresh
+53 GB-per-rank sidecar, because `hf_overrides` is part of the fast-load identity: **a launcher argument
+invalidates the sidecar exactly as a `patch-*.py` does** ([docs/08](docs/08-fast-boot.md) §4,
+[docs/14](docs/14-troubleshooting.md) §9.15). The previous sidecar and env file are kept, so the
+rollback is one file and no dump.
+
 ## 11 September 2026 — measured: 118 tool calls to 100.5k tokens on the fail-closed build, 0 malformed XML ([results/gates/toolcall-gate-11sep.md](results/gates/toolcall-gate-11sep.md))
 
 ---

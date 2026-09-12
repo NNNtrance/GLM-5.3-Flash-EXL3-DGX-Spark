@@ -96,6 +96,12 @@ What the patch changes is the consequence: one bad call used to seed a loop that
 the rate had to be near zero to be survivable; now it costs one visibly ugly turn. **Only the cascade
 is broken**, and no number on this page should be read as evidence about the first corruption.
 
+**Since 12 September part of that rate has an address**: raising the sparse indexer's `index_topk` from
+2048 to 8192 took a 30-turn replay at 30–41k prompt tokens from 11 bad turns to 2, with speculative
+decoding, FlashKDA, fp8 KV and the grammar each cleared in their own arm
+([`index-topk-8192-12sep.md`](index-topk-8192-12sep.md)). It does not settle the checkpoint question
+above, which is a comparison against the other stack.
+
 Every gate here is also still **single-turn**, which is the whole blind spot this failure lived in. The
 multi-turn gate that would catch this class directly does not exist yet:
 [HELP-WANTED](../../HELP-WANTED.md) §14, which now wants a tool-call variant as well as a text one.

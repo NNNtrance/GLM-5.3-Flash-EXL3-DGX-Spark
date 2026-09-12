@@ -323,6 +323,11 @@ anything; we published a kernel conclusion drawn from one pair and had to withdr
 | Fresh, unseen ~8.5K prompts | **1,744** tok/s — 1,737 on the load boot, 1,750 on the clean boot | **1,692 – 1,796** | 1,738 |
 | Warm, repeated 7K prompt | 1,622 / 1,632 tok/s | — | 1,575 |
 
+**This band is pre-12-September.** Production carries `"index_topk":8192` since then, and the 7K-prompt
+reading fell 27 % with it; the fresh-prefill sweep above was **not** re-run `[not tested]`. Expect this
+row to move and do not read a low reading here as a fault until it has been re-established —
+[`../results/gates/index-topk-8192-12sep.md`](../results/gates/index-topk-8192-12sep.md) §7.
+
 **A prefill number measured on a repeated prompt is not a prefill measurement.** The second run reads
 whole blocks out of the prefix cache and overstates by up to 55 %. `scripts/prefill-7k.py` reports
 the warm number and says so; `bench/prefill-fresh.py` draws a new seed per request and is the one to

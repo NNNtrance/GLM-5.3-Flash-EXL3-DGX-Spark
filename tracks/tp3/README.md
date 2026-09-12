@@ -3,6 +3,18 @@
 **This is the production track.** It is what our three nodes serve, start at boot, and were rebooted
 into as a whole cluster with the quality gates read afterwards.
 
+**12 September 2026 — the production `--hf-overrides` now carries `"index_topk":8192`** (the checkpoint
+declares 2048). It is the one change that moved the long-session tool-call argument corruption of issue
+#7: in a 30-turn replay at 30–41k prompt tokens, bad turns went 11/7 → **2/3** (full prefill / prefix
+reuse) through 6/4 at 4096, while speculative decoding, FlashKDA, fp8 KV and the structural-tag grammar
+were each removed in their own arm and each left the defect in place. Gates on the production boot:
+probe 10/10, code exam 12/12, needle-lite 6/6, strict tool-call gate **72/72 well-formed, 0 rejected**,
+KV pool 7,033,057 (in band), boot 170 s. **It is not free — a 7K-prompt prefill reading went 1,868 →
+1,366 tok/s (−27 %)** and per-turn prefill on the replay about +11 %; decode unmoved. It cost one ~6 min
+dump boot and a fresh 53 GB-per-rank sidecar, because `hf_overrides` is part of the fast-load identity.
+[`results/gates/index-topk-8192-12sep.md`](../../results/gates/index-topk-8192-12sep.md),
+[docs/14](../../docs/14-troubleshooting.md) §9.15.
+
 The recipe itself is the [README quick start](../../README.md) — eleven steps and one optional, each ending in a
 check. This page is the directory: what is in it, what stays outside it, and the numbers this
 arrangement produces.
@@ -121,7 +133,9 @@ range for agentic sessions. Measured on this stack in September 2026 (our gates 
 of agentic history, the first behavioural loops around **70k**, and a full derailment was captured at
 **378k** (with the sparse-MLA indexer's top-k, each token attends to well under 1% of such a history).
 The healthy agentic range on this stack is roughly **50-80k tokens**; beyond ~100k is unmeasured
-territory. Practical consequences: keep worker sessions short (one stage of work per card), compress
+territory. **Since 12 September the 36k figure is a property of the old `index_topk` 2048 setting**: at
+8192 the same replay drops from 11 bad turns in 30 to 2, and the numbers in this paragraph were taken
+before that change ([`results/gates/index-topk-8192-12sep.md`](../../results/gates/index-topk-8192-12sep.md)). Practical consequences: keep worker sessions short (one stage of work per card), compress
 or reset well before 100k, cap completion tokens per request, and enable the structural-tag grammar
 (`strict: true` on tools) together with the fail-closed parser and the xgrammar backports
 (docs/14 §9.13-9.14) so that what *does* go wrong is refused rather than executed.

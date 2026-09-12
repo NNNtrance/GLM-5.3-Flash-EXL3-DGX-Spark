@@ -125,7 +125,10 @@ range for agentic sessions. Measured on this stack in September 2026 (our gates 
 of agentic history, the first behavioural loops around **70k**, and a full derailment was captured at
 **378k** (with the sparse-MLA indexer's top-k, each token attends to well under 1% of such a history).
 The healthy agentic range on this stack is roughly **50-80k tokens**; beyond ~100k is unmeasured
-territory. Practical consequences: keep worker sessions short (one stage of work per card), compress
+territory. **On the three-node track the 36k figure was traced to the sparse indexer's `index_topk`
+2048 and largely removed by raising it to 8192** on 12 September, at the cost of short-prompt prefill;
+that was never run at two ranks `[not tested]`
+([`../../results/gates/index-topk-8192-12sep.md`](../../results/gates/index-topk-8192-12sep.md)). Practical consequences: keep worker sessions short (one stage of work per card), compress
 or reset well before 100k, cap completion tokens per request, and enable the structural-tag grammar
 (`strict: true` on tools) together with the fail-closed parser and the xgrammar backports
 (docs/14 §9.13-9.14) so that what *does* go wrong is refused rather than executed.

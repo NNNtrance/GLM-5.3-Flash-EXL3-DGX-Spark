@@ -240,6 +240,14 @@ nobody checked. It fired twice during the work, and both times it was the design
 Neither was a bug in the fail-closed design: in both cases the alternative behaviour — shrug and load something — is the outcome
 the design exists to prevent.
 
+It fired a third time on 12 September 2026, and that one is worth a sentence of its own because it was **not** a patch file:
+adding `"index_topk":8192` to the launcher's `--hf-overrides` changed the target model's `hf_overrides`, which is part of the
+identity above, so a `load` boot was refused with `harem-fastload: sidecar was written for a different model configuration`.
+**A launcher argument can cost a dump boot exactly as a `patch-*.py` can.** Adoption took one dump boot of about 6 minutes into a
+new directory and 53 GB per rank, after which `load` boots are 170 s again; exploratory arms that change the override run with
+`FASTLOAD_MODE` empty instead ([14](14-troubleshooting.md) §9.15,
+[`../results/gates/index-topk-8192-12sep.md`](../results/gates/index-topk-8192-12sep.md)).
+
 ## 5. The regression that had to be chased: KV −4.1 %
 
 BOOT1 came back with a KV pool of **4,231,404** tokens against the 0.80 reference arm's **4,413,223** — a 4.1 % loss from a
