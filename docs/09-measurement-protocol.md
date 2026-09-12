@@ -408,6 +408,27 @@ number without them is not a result. And every tier reports **what the gain cost
 and memory together, with the KV pool line filled in, because several changes on this stack have paid
 for throughput out of the pool without anyone noticing for a boot or two.
 
+### 9.1 A fourth, narrower tier: copy fidelity at long context
+
+None of the three tiers above catches the defect in [docs/14](14-troubleshooting.md) §9.15 — it does
+not show at all until tens of thousands of tokens of agentic history have built up, which is past
+what a short, repeatable prompt or a five-round sweep ever reaches. It needs its own instrument:
+[`scripts/longctx-copy-fidelity.py`](../scripts/longctx-copy-fidelity.py) builds a seeded, fully
+fictional agent transcript (a fake project with near-duplicate absolute paths, read/write/search/
+terminal tool calls and their results) up to a target prompt size, then runs real turns that each
+require copying one exact path out of that history without it being restated, and classifies every
+path-like tool-call argument as an exact copy, an edit-distance slip, a splice, a decoy, or
+unrelated.
+
+Treat it the way §6 asks: read a trend across configurations, never an absolute rate. The corpus is
+still a stress fixture — near-duplicate paths at a far higher density than an organic session would
+produce — but it is generated clean on every run, so it does not carry the self-imitation effect §2
+of [results/gates/index-topk-8192-12sep.md](../results/gates/index-topk-8192-12sep.md) documents for
+the original session replay (the model copying its own earlier mistakes); that should make this
+instrument's absolute numbers milder than the original's, not worse. A 30-turn, 35k-token run still
+costs tens of minutes rather than seconds, because the first scored turn cannot fire until the
+fixture has built a cold boot's worth of context inside the run itself.
+
 ## 10. One measurement at a time: the GPU and the fabric are a lock
 
 This is a protocol rule, not a courtesy. On a three-node cluster with one engine, a model-free

@@ -274,3 +274,25 @@ from its own history-trimming feature (turned off), and a `medium` reasoning eff
 checkpoint's chat template silently maps to `max` (the template accepts only `low` and `high`), which
 ran the thinking to the output cap at 42k tokens. Both are harness settings, not engine defects; they
 are recorded here because a reader chasing "corruption" will meet them first.
+
+**A public probe that reproduces this shape without private data.**
+[`scripts/longctx-copy-fidelity.py`](../../scripts/longctx-copy-fidelity.py) is a self-contained,
+seeded instrument anyone can point at an OpenAI-compatible endpoint: a fictional Godot-style project
+with ~40 near-duplicate absolute paths (plus about 15 decoys that exist only inside simulated "not
+found" errors), a fabricated transcript built to a target prompt size, and 30 scored turns that each
+require an exact copy of one path never restated in the prompt. Run against this page's production
+settings — `index_topk` 8192, `strict` tool schemas, `reasoning_effort low`, `clear_thinking: true`,
+30 turns, a 35k-token target — it read **30/30 EXACT, 0 bad turns** on both the `fresh` and the
+`session` arm `[measured-here]`: clean, and inside what this page's own ~1–3/30 readings at this
+setting (§3, §6) can produce from a single run, not a disproof of §9's open residual. **It is not yet
+a substitute for the private replay.** Booted back to the checkpoint's `index_topk` 2048 — where the
+replay reads 11/30 (§3) — the same fixture, same settings, `fresh` arm, read **0/30** as well
+`[measured-here]`. So the defect needs something this first fixture does not supply: most likely the
+density and diversity of real tool output (thousands of lines of code and test logs between the
+mentions of a path, so that the path's tokens are a small minority of what the selector has to rank)
+rather than a transcript in which near-duplicate paths are the dominant content. Treat version 1 as a
+smoke test for the runaway / degenerate-repetition / invalid-JSON symptoms and as the scaffold for the
+next fixture, not as the defect's yardstick; the per-turn counts, prompt tokens and latency are in the
+JSON file the script writes with `--out`, and `--rescore` re-labels an earlier file with the current
+classifier. What both arms did reproduce is the mechanism §2 splits the replay on: median per-turn
+latency 27.9 s on `fresh` against 4.1 s on `session`.

@@ -1907,6 +1907,25 @@ dense arm does not run on this image, and kpool 1 at a useful budget falls outsi
 widths. [`../results/gates/index-topk-8192-12sep.md`](../results/gates/index-topk-8192-12sep.md) §10,
 [11](11-open-issues.md) §2.36.
 
+**A public instrument for this shape, with no private data.**
+[`scripts/longctx-copy-fidelity.py`](../scripts/longctx-copy-fidelity.py) reproduces the method
+above without any of the original session's content: a seeded, fully fictional Godot-style project
+(~40 near-duplicate absolute paths under a fictional root, plus about 15 decoy siblings that exist
+only inside simulated "not found" errors), a fabricated transcript built up to a target prompt size,
+then real turns that each require copying one exact path out of the history without it being
+restated. It classifies every path-like tool-call argument as EXACT, SLIP, SPLICE, DECOY or OTHER,
+plus JSON-invalid arguments and `finish_reason == "length"` runaways, and writes a JSON results
+file. Run twice against this stack's production engine — `index_topk` 8192, `strict` tool schemas,
+`reasoning_effort low`, `clear_thinking: true`, 30 turns, a 35k-token target — it read **30/30
+EXACT, 0 bad turns** on both the `fresh` and the `session` arm `[measured-here]` — and, booted back
+to `index_topk` 2048 where the private replay reads 11/30, **also 0/30**. So version 1 of the fixture
+does not yet reproduce the defect: the replay's corruption needs conditions this transcript lacks,
+most likely the density of real tool output between the mentions of a path (see the gate page §10 for
+the reading). Use it as a smoke test for the runaway, degenerate-repetition and invalid-JSON symptoms
+and as the scaffold for a denser fixture, not as this entry's yardstick. What the two arms did
+reproduce is the mechanism the bisection depends on: median per-turn latency was 27.9 s on `fresh`
+against 4.1 s on `session`, the same prefix-cache gap that page's §2 splits the replay on.
+
 ---
 
 ## 10. Operations
