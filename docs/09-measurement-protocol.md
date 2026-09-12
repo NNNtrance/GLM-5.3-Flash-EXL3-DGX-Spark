@@ -420,7 +420,10 @@ require copying one exact path out of that history without it being restated, an
 path-like tool-call argument as an exact copy, an edit-distance slip, a splice, a decoy, or
 unrelated.
 
-Treat it the way §6 asks: read a trend across configurations, never an absolute rate. The corpus is
+Its first version is a scaffold, not yet a yardstick: at `index_topk` 2048 it read 0/30 where the
+private replay reads 11/30 ([results/gates/index-topk-8192-12sep.md](../results/gates/index-topk-8192-12sep.md)
+§10), so the fixture still lacks whatever makes real agent context hard to copy from — most likely the
+volume of code and logs between the mentions of a path. Treat it the way §6 asks: read a trend across configurations, never an absolute rate. The corpus is
 still a stress fixture — near-duplicate paths at a far higher density than an organic session would
 produce — but it is generated clean on every run, so it does not carry the self-imitation effect §2
 of [results/gates/index-topk-8192-12sep.md](../results/gates/index-topk-8192-12sep.md) documents for

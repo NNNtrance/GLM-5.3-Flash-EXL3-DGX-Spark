@@ -11,6 +11,15 @@ rounds, which is what the persisted MLA tuner cache bought — see
 
 ---
 
+## 12 September 2026 (evening) — public long-context copy-fidelity probe, version 1
+
+`scripts/longctx-copy-fidelity.py`: a seeded, fully fictional agent transcript with near-duplicate
+absolute paths, 30 scored tool-call turns, EXACT / SLIP / SPLICE / DECOY classification, `--rescore`.
+On the production boot (8192) it read 30/30 EXACT on both cache arms; on a 2048 boot it also read
+0/30 where the private replay reads 11/30, so version 1 is a scaffold and a smoke test, not yet the
+defect's yardstick — the next fixture needs real-density tool output between path mentions. See
+[docs/09](docs/09-measurement-protocol.md) §9.1, [docs/14](docs/14-troubleshooting.md) §9.15.
+
 ## 12 September 2026 (afternoon) — four negative arms on the long-session corruption; production unchanged
 
 At `index_topk` 2048: exact `torch.topk` selection 9 / 6, bf16 indexer weights 7 / 9, forced sink +
