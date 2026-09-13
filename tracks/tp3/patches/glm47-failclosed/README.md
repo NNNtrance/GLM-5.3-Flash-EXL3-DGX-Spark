@@ -199,6 +199,87 @@ sidecar-less boot for nothing ([CHANGELOG](../../../../CHANGELOG.md), 11 Septemb
 - **Full removal.** Delete the prelude line and the script. That changes the identity again, so the
   first boot after it is sidecar-less, then a new sidecar — the same three steps as §4.
 
+## 5b. `HAREM_GLM47_RETRY` — a rejected call is retryable, not a dead turn
+
+**The problem this closes.** `_harem_reject` surfaces the call as *content* and
+clears the slot, so the response goes back as a text turn with no tool calls —
+and every agent loop reads "assistant produced text, no tool call" as *the turn
+is finished*. One malformed call silently ends the session instead of being
+retried. A user's first report of it was a fragment of markup on screen and a
+turn that simply stopped, with no way to tell a failure from a completed answer;
+that is the same confusion the intercept marker in issue #7 was proposed for.
+
+Worth naming what it replaced: **before** this patch a malformed call was not
+terminal. It was salvaged into a real `tool_calls` entry, the client's schema
+rejected it, the error went back into the conversation and the loop continued.
+The patch traded a cascade for a dead turn. The cascade is worse, so the trade
+was right — but it is avoidable.
+
+**The cascade was never about emitting a call.** It came from
+`_glm47_arg_converter` salvaging garbage into a *plausible* dict, which the
+client echoed back, the template re-rendered in canonical `<arg_key>` syntax and
+the model imitated. The defect is the plausibility, not the emission.
+
+So with `HAREM_GLM47_RETRY` (default ON under the fail-closed gate; `=0` gives
+the content-only behaviour above) a rejection is re-offered as a call whose
+arguments cannot be mistaken for real ones:
+
+```json
+{"__harem_invalid_tool_call__": "argument key 'prefix' is not in the tool schema; valid keys for 'bash' are: command, timeout, workdir"}
+```
+
+The sentinel key is in no tool's schema, so a validating client **always**
+rejects it and it can never half-execute — which is what makes "just drop the
+bad arguments" unsafe, since a dropped argument can be a safety flag. The client
+turns it into an ordinary tool error, the model is told what it got wrong, and
+the loop continues.
+
+Scope: only when the tool **name** resolves, by exact match first and then the
+longest offered tool name the emitted name *starts with* — production captured
+`bash1635,1676p src/app/...`, a `sed` range welded on with no separator, where a
+longest-identifier-run rule yields `bash1635` and dies. A name matching no
+offered tool has no call to make and still falls back to content.
+
+### Two details that each cost a deploy
+
+**The reason has to name the mistake.** A first version said only "argument key
+is not in the tool schema". The model then saw a call it never made plus a
+generic client schema error, with its own mistake erased — so it had nothing to
+learn from and repeated the identical error next turn. Naming the offending key
+*and* the valid keys fixed it. The offending key is model output, so it goes
+through `_harem_safe`, which strips angle-bracketed fragments before quoting it
+back: one captured name was `bash@1</arg_value>`, and quoting that verbatim
+walks straight back into the cascade.
+
+**The truncated path needs its own streaming handling.** `_harem_finalize` runs
+after the event loop with no `deltas` list, so a never-closed call recorded there
+is picked up by the non-streaming extractor and **silently dropped when
+streaming** — a dead turn again. It is held in `_harem_pending_stream` and put on
+the stream there. `_build_extracted_result` reads `_tool_slots` and delta
+*content* only, never delta tool calls, so the two paths stay independent and
+cannot double-emit.
+
+### Status
+
+On a deployment also running `toolcall-autostrict`, rejections are **0 over 29 h
+/ 322 requests**, so this path is now rarely exercised there. It remains the
+backstop for anyone not arming the grammar, and for the residual in
+[`copy-fidelity-residual-13sep.md`](../../../../results/gates/copy-fidelity-residual-13sep.md),
+where the syntax is valid and the copied *content* is wrong.
+
+`test_retryable_rejection.py`: 13 model-free checks — three captured production
+vectors, a no-valid-prefix counter-case (a genuine hallucination has no call to
+make and must stay content), longest-first resolution with two tools offered, and
+a `=0` arm asserting the content-only behaviour byte for byte. It also caught the
+`</arg_value>` leak above, which is the argument for having it.
+
+**Limits.** One deployment, one harness. The design assumes the client validates
+tool arguments against the schema it sent — true for OpenCode and, from the
+transcript in #7, for zcode — but a client that passes unvalidated arguments
+straight to the tool would see the sentinel key reach the tool itself. For `bash`
+that is a clean failure; for a tool whose arguments are all optional it might not
+be.
+
 ## 6. Known limitations
 
 Three, all on the error path, none of them silent:
