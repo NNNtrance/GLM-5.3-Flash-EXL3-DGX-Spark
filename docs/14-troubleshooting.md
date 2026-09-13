@@ -1926,6 +1926,19 @@ and as the scaffold for a denser fixture, not as this entry's yardstick. What th
 reproduce is the mechanism the bisection depends on: median per-turn latency was 27.9 s on `fresh`
 against 4.1 s on `session`, the same prefix-cache gap that page's §2 splits the replay on.
 
+**The residual at 8192, measured on 13 September.** With the private real-density probe (twelve paths
+planted once each across a 100k-token context, twelve deep copies per stream) the production boot
+reads about **3 % of turns bad** — 2/48 at four concurrent streams, 2/72 at six, **2/36 single-stream**,
+1/48 with DFlash2 off, **3/84 at temperature 0** — always the same two shapes (one dropped character,
+one splice) on the same near-duplicate targets. So the residual is not concurrency, not speculative
+decoding and not sampling; it is the model + engine at this selection budget, and with no dense arm
+on this image the only engine-side lever left is a selector kernel above 8,192. Numbers copy better
+than paths: the same probe on twelve planted numeric values read **0/36 digit slips** (31 exact, one
+neighbouring value, two patches written without the number). What absorbs the residual is the harness:
+a tool-request middleware that repairs a slipped path argument against the real tree before the tool
+runs (7/7 of the recorded shapes, no false repair in 51 checks, every repair logged). Rates and the
+repair rules: [`../results/gates/copy-fidelity-residual-13sep.md`](../results/gates/copy-fidelity-residual-13sep.md).
+
 ---
 
 ## 10. Operations

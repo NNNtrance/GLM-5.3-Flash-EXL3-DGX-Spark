@@ -572,10 +572,14 @@ stack owner's decision**, not deferred for technical reasons.
 
 </details>
 
-### 2.5 `--max-num-batched-tokens 3072`
+### 2.5 `--max-num-batched-tokens` — closed on 13 September 2026, 2,048 in both directions
 
-2048 and 4096 were both measured; the intermediate value was not `[not tested]`. It is the obvious
-probe if you want some of the prefill back without all of the KV pool.
+8,192 was measured on 30 August (KV pool −28 %, speed within the spread) and 1,024 / 512 on 13 September
+(writers 2× / 3.4× faster while another stream is read, the read 19 % / 100 % slower, C4 TTFT +49 % /
+2.8×). The per-step fixed cost during prefill is ~0.5 s, so smaller chunks lose on any workload that
+reads most of the time and larger ones cost pool and stall the writers. 3,072 is still not measured
+`[not tested]`, and the curve leaves it nothing to win.
+[`../results/gates/concurrency-chunk-13sep.md`](../results/gates/concurrency-chunk-13sep.md) §4.
 
 ### 2.6 `block_m` under expert parallelism
 

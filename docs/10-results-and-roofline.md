@@ -264,6 +264,21 @@ the two-node arm, *wins* prose at 21.3 against 18.5 tok/s while losing every oth
 measured. Full evidence, every arm and both concurrency levels:
 [`../results/speed/category-speeds-production-12.md`](../results/speed/category-speeds-production-12.md).
 
+### 1.3 One reader stalls every writer, and the chunk size is not the fix
+
+The number an agent harness actually sees is not the C8 aggregate. While one stream's 82k-token prompt
+is being read (60 s at 1,364 tok/s), every stream that is decoding drops to **a tenth** of its speed —
+0.8 chunks/s per prose stream against 8.5 before and after — because each chunked-prefill step
+(2,048 prompt tokens, ~1.5 s at that context) advances every decoding sequence by one step. In a
+multi-agent run every tool result is a read, so this dip is the normal state: 4–5 tok/s per worker in
+a live 4–6-worker session. `--max-num-batched-tokens` was measured at 1,024 and 512 (writers 2× and
+3.4× faster during a read; the read 19 % and 100 % slower; C4 TTFT +49 % and 2.8×) and at 8,192 in
+August (KV pool −28 %, no speed): **2,048 stays**, and the per-step fixed cost during prefill is
+~0.5 s, not a decode step's 30 ms. Reading is also serialized: four 24k prompts arriving together wait
+62 s for the last first token, 96k tokens at the engine's fixed ~1.5k tok/s. Full tables, the
+`--max-num-seqs` 8 → 5 non-result and the instrument:
+[`../results/gates/concurrency-chunk-13sep.md`](../results/gates/concurrency-chunk-13sep.md).
+
 ---
 
 ## 2. How it got there

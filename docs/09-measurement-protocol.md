@@ -432,6 +432,11 @@ instrument's absolute numbers milder than the original's, not worse. A 30-turn, 
 costs tens of minutes rather than seconds, because the first scored turn cannot fire until the
 fixture has built a cold boot's worth of context inside the run itself.
 
+What the private, real-density version of this instrument reads on the production boot, and its
+numeric-value variant (0/36 digit slips), is on
+[results/gates/copy-fidelity-residual-13sep.md](../results/gates/copy-fidelity-residual-13sep.md): about
+3 % of deep copies at 100k, unchanged by concurrency, speculative decoding or temperature 0.
+
 ## 10. One measurement at a time: the GPU and the fabric are a lock
 
 This is a protocol rule, not a courtesy. On a three-node cluster with one engine, a model-free

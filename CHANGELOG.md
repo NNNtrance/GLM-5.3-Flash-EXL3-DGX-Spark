@@ -11,6 +11,20 @@ rounds, which is what the persisted MLA tuner cache bought — see
 
 ---
 
+## 13 September 2026 — concurrency physics at agent workloads; the copy-slip residual bounded
+
+One reader stalls every writer: while an 82k-token prompt is read (60 s), three decoding prose streams
+drop from 8.5 to **0.8** chunks/s and recover instantly after. `--max-num-batched-tokens` measured at
+1,024 and 512 (writers 2× / 3.4× faster during a read, the read 19 % / 100 % slower) beside August's
+8,192: **2,048 stays**. `--max-num-seqs` 8 → 5 changed nothing on its own (KV +0.2 %). Code C8 186.8 vs
+prose C8 82.7 tok/s at 60 % vs 15 % draft acceptance. The long-context copy slip at `index_topk` 8192 is
+about **3 % of deep copies at 100k** — the same single-stream, at 4 and 6 streams, with DFlash2 off and
+at temperature 0 — and numbers do not slip (0/36); a harness-side path-repair middleware absorbs the
+path shapes (7/7). New instrument `scripts/prefill-interference.py`. Production unchanged except
+`--max-num-seqs 5`. See [results/gates/concurrency-chunk-13sep.md](results/gates/concurrency-chunk-13sep.md),
+[results/gates/copy-fidelity-residual-13sep.md](results/gates/copy-fidelity-residual-13sep.md),
+[docs/10](docs/10-results-and-roofline.md) §1.3, [docs/14](docs/14-troubleshooting.md) §9.15.
+
 ## 12 September 2026 (evening) — public long-context copy-fidelity probe, version 1
 
 `scripts/longctx-copy-fidelity.py`: a seeded, fully fictional agent transcript with near-duplicate
