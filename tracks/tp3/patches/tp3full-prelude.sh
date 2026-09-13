@@ -264,6 +264,25 @@ run python3 "$TP3_DIR/patch-flashkda-tp3.py" \
 run python3 "$TP3_DIR/patch-glm47-failclosed-tp3.py" \
     --root "$(dirname "$VLLM_PY")" --in-place
 
+# --- tool_choice="auto" arms the tool-call grammar --------------------------
+# Applied UNCONDITIONALLY so a control arm runs the same bytes; the BEHAVIOUR is
+# env-gated and DEFAULT OFF.
+#   HAREM_TOOLCALL_AUTOSTRICT unset / 0 -> upstream byte for byte: vLLM discards
+#                                    the glm_4_7 structural tag for
+#                                    tool_choice="auto" unless a tool declares
+#                                    strict:true, which no agent harness does.
+#   HAREM_TOOLCALL_AUTOSTRICT=1      -> the grammar is kept, so malformed
+#                                    tool-call syntax is not samplable.
+# The captured production shape it removes is <arg_key> -> the VALUE ->
+# </arg_value>, with the key name and middle tags skipped; that is not a legal
+# production under the tag. The fail-closed parser above can only report it
+# after the fact.
+# ORDER is immaterial: nothing else here touches vllm/tool_parsers/.
+# Same --root / --in-place contract as the two arms above.
+# patches/toolcall-autostrict/README.md
+run python3 "$TP3_DIR/toolcall-autostrict/patch-toolcall-autostrict-tp3.py" \
+    --root "$(dirname "$VLLM_PY")" --in-place
+
 # --- Vision tower -------------------------------------------------------------
 # Production configuration 13 also runs the vision block, which is kept beside
 # its own patch and gates rather than inlined here: paste
