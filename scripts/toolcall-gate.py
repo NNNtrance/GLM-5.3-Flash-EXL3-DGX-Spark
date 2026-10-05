@@ -913,7 +913,7 @@ def run_session(sid: int, args, out_lock: threading.Lock, jsonl: pathlib.Path) -
         ch = d["choices"][0]
         m = ch.get("message") or {}
         content = m.get("content") or ""
-        reasoning = m.get("reasoning_content") or ""
+        reasoning = m.get("reasoning") or m.get("reasoning_content") or ""  # vLLM returns the field as "reasoning"
         tcs = m.get("tool_calls") or []
         usage = d.get("usage") or {}
         ptk = int(usage.get("prompt_tokens") or 0)

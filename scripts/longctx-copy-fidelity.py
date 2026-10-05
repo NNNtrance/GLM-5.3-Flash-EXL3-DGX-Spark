@@ -600,7 +600,7 @@ def score_and_append(turn_idx: int, messages: list[dict], resp: dict, secs: floa
     choice = (resp.get("choices") or [{}])[0]
     msg = choice.get("message") or {}
     content = msg.get("content") or ""
-    reasoning = msg.get("reasoning_content") or ""
+    reasoning = msg.get("reasoning") or msg.get("reasoning_content") or ""  # vLLM returns the field as "reasoning"
     tool_calls = msg.get("tool_calls") or []
     finish = choice.get("finish_reason")
     usage = resp.get("usage") or {}
