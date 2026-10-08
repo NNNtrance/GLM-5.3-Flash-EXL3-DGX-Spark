@@ -26,6 +26,28 @@
 > what we know; [docs/11 §1](docs/11-open-issues.md) is what we published and then had to withdraw,
 > and [audit/](audit/README.md) §6 indexes it. **Read the retractions before you quote a number.**
 
+> **⚠ Correctness notice — 8 October 2026. Every configuration in this repository selects the wrong MoE experts.**
+> The `cuda-exl3` plugin build this recipe installs (commit `754421f` and earlier upstream) never loads the
+> router's load-balancing bias, `e_score_correction_bias`. `Exl3MoEMethod.create_weights` installs its own
+> weight loader on every direct parameter of the MoE layer — including the router bias that vLLM registers
+> there — and that loader silently declines a tensor without expert arguments. The bias stays at zero, and
+> vLLM's missing-weight check is off for quantized checkpoints, so nothing reports it.
+> - **Measured against the reference implementation** (exllamav3 1.5.4, same checkpoint): the engine's
+>   top-8 expert set differed from the reference at **96 of 96** sampled positions (about 3 of 8 experts in
+>   common), and assistant-token KL to the reference was **0.103** against an engine repeat-noise floor of
+>   **0.0081**. With the bias loaded: KL **0.0084** (at the floor), perplexity 2.222 against the reference's
+>   2.224, expert sets matching 96/96 `[measured-here]`.
+> - **Fix:** [`NNNtrance/cuda-exl3` @ `004e9f8`](https://github.com/NNNtrance/cuda-exl3/commit/004e9f8d9840bb4c10b58ada929af6a047120f50)
+>   (branch `fix/moe-create-weights-scope`): the loader goes only on the plugin's own parameters. Offered
+>   upstream as [Zeuss5/cuda-exl3#8](https://github.com/Zeuss5/cuda-exl3/pull/8); this recipe will point at
+>   our fork from now on rather than wait for it.
+> - **What it means for the numbers below:** every quality figure in this repository (gates, GSM8K, IFEval,
+>   MMLU, tool-eval-bench, needle) was measured on the broken routing and is **withdrawn until re-measured**.
+>   Speed figures are not comparable either: correct routing reads 28–38 % more distinct experts per rank and
+>   layer, and decode steps measured **11 % (one stream) to 20 % (four streams) longer** `[measured-here]`.
+> - A rewrite on current vLLM `main` with the fix built in, a boot gate that refuses to start without the
+>   bias, and the measurements redone is being validated now and will replace this page.
+
 ## How many nodes do you have?
 
 One question decides which half of this repository is yours, and

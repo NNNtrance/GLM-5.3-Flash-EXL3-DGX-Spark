@@ -11,6 +11,16 @@ rounds, which is what the persisted MLA tuner cache bought — see
 
 ---
 
+## 8 October 2026 — correctness notice: the MoE router bias was never loaded
+
+`cuda-exl3` up to `754421f` silently drops the router's `e_score_correction_bias`; every configuration in
+this repository therefore picked experts without their load-balancing bias (top-8 set different from the
+reference at 96/96 sampled positions, assistant-token KL 0.103 against a 0.0081 floor). Fix
+[`NNNtrance/cuda-exl3` @ `004e9f8`](https://github.com/NNNtrance/cuda-exl3/commit/004e9f8d9840bb4c10b58ada929af6a047120f50),
+offered upstream as [Zeuss5/cuda-exl3#8](https://github.com/Zeuss5/cuda-exl3/pull/8). All quality figures
+are withdrawn until re-measured; speed figures are not comparable (correct routing: decode steps 11–20 %
+longer). See the notice at the top of the [README](README.md) and [docs/11](docs/11-open-issues.md) §1.12.
+
 ## 13 September 2026 — concurrency physics at agent workloads; the copy-slip residual bounded
 
 One reader stalls every writer: while an 82k-token prompt is read (60 s), three decoding prose streams

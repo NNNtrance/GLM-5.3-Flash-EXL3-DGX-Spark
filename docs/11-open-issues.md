@@ -166,6 +166,17 @@ corrected us and not him. The rule that came out of it is in
 and check the achieved bandwidth of both arms** — the artefact's *sign* depends on which arm fits the
 cache, so it is not a constant offset that cancels in a ratio.
 
+### 1.12 Every quality figure in this repository, and the routing behind it (8 October 2026)
+
+`[retracted]` All quality results here — the gates, GSM8K, IFEval, MMLU, tool-eval-bench and the 1M needle —
+were measured on an engine whose MoE router ran without its `e_score_correction_bias`, because the
+`cuda-exl3` loader in use never loaded it. Against the reference implementation the expert sets differed at
+96/96 sampled positions and assistant-token KL was 0.103 (floor 0.0081); with the bias loaded, KL is 0.0084.
+**What replaces them:** nothing yet — they are withdrawn until re-measured on the fixed engine. The speed
+figures are withdrawn as a basis for comparison for the same reason: correct routing reads 28–38 % more
+distinct experts, and decode steps are 11–20 % longer. Fix and details: the README notice and
+[`NNNtrance/cuda-exl3` @ `004e9f8`](https://github.com/NNNtrance/cuda-exl3/commit/004e9f8d9840bb4c10b58ada929af6a047120f50).
+
 ### 1.9 The full audit: every claim of ours that a measurement overturned
 
 On 5 September the whole stack was re-read against its own raw data, and every published claim was
