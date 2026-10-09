@@ -166,17 +166,6 @@ corrected us and not him. The rule that came out of it is in
 and check the achieved bandwidth of both arms** — the artefact's *sign* depends on which arm fits the
 cache, so it is not a constant offset that cancels in a ratio.
 
-### 1.12 Every quality figure in this repository, and the routing behind it (8 October 2026)
-
-`[retracted]` All quality results here — the gates, GSM8K, IFEval, MMLU, tool-eval-bench and the 1M needle —
-were measured on an engine whose MoE router ran without its `e_score_correction_bias`, because the
-`cuda-exl3` loader in use never loaded it. Against the reference implementation the expert sets differed at
-96/96 sampled positions and assistant-token KL was 0.103 (floor 0.0081); with the bias loaded, KL is 0.0084.
-**What replaces them:** nothing yet — they are withdrawn until re-measured on the fixed engine. The speed
-figures are withdrawn as a basis for comparison for the same reason: correct routing reads 28–38 % more
-distinct experts, and decode steps are 11–20 % longer. Fix and details: the README notice and
-[`NNNtrance/cuda-exl3` @ `004e9f8`](https://github.com/NNNtrance/cuda-exl3/commit/004e9f8d9840bb4c10b58ada929af6a047120f50).
-
 ### 1.9 The full audit: every claim of ours that a measurement overturned
 
 On 5 September the whole stack was re-read against its own raw data, and every published claim was
@@ -337,6 +326,17 @@ falsified both was named and waved past. The counter-discipline this stack alrea
 *model-free first, and a number is only a plan input if two independent sources agree* — would have
 caught it from the safetensors headers alone, with no GPU and no engine window. Retracted and
 replaced by [18](18-vision-at-three-ranks.md), 7 September 2026.
+
+### 1.15 Every quality figure in this repository, and the routing behind it (8 October 2026)
+
+`[retracted]` All quality results here — the gates, GSM8K, IFEval, MMLU, tool-eval-bench and the 1M needle —
+were measured on an engine whose MoE router ran without its `e_score_correction_bias`, because the
+`cuda-exl3` loader in use never loaded it. Against the reference implementation the expert sets differed at
+96/96 sampled positions and assistant-token KL was 0.103 — against that build's own repeat floor of 0.0094 (the 0.0081 first printed here is the fixed build's floor; the gap is 11×, not 13×) and a reference-jitter floor of 0.0067; with the bias loaded, KL is 0.0084, and 0.0083 on the production build.
+**What replaces them (9 October 2026):** for the quantity that matters most — does the engine compute the model — the KL health check against the official reference, now at the floor; the speed, memory, soak and boot figures of the rewritten stack are in [`results/main-stack/`](../results/main-stack/README.md). The benchmark scores themselves (GSM8K, IFEval, MMLU, tool-eval-bench, the 1M needle, the code exam and probe) have **not** been re-measured on a corrected build and stay withdrawn `[not tested]`; the in-house battery of 7 October ran on the build before the fix and does not count either ([`results/main-stack/quality-gates.md`](../results/main-stack/quality-gates.md)). The speed
+figures are withdrawn as a basis for comparison for the same reason: correct routing reads 28–38 % more
+distinct experts, and decode steps are 11–20 % longer. Fix and details: the README notice and
+[`NNNtrance/cuda-exl3` @ `004e9f8`](https://github.com/NNNtrance/cuda-exl3/commit/004e9f8d9840bb4c10b58ada929af6a047120f50).
 
 ## 2. Open, with a known next step
 

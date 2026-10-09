@@ -1,7 +1,9 @@
 # tracks — one repository, two node counts, kept apart
 
 This repository serves the same model on **two** working arrangements: three nodes at TP=3 with
-expert parallelism, and two nodes at TP=2. Most of what is here belongs to both. A small number of
+expert parallelism, and two nodes at TP=2. Since 8 October 2026 the three-node production is the
+[`tp3-main/`](tp3-main/README.md) track on upstream vLLM `main`; the two older folders describe the stack
+whose MoE router bias was never loaded. Most of what is here belongs to both. A small number of
 files belong to exactly one, and mixing those two sets is how a reader ends up running a three-node
 patch tree at two ranks.
 
@@ -14,8 +16,9 @@ question and answers it.
 
 | | |
 |---|---|
-| [**tp3/**](tp3/) | Three nodes, TP=3 + expert parallelism. The production recipe |
-| [**tp2/**](tp2/) | Two nodes, TP=2, expert parallelism off |
+| [**tp3-main/**](tp3-main/README.md) | Three nodes, TP=3 + expert parallelism, on **upstream vLLM `main`** with the MoE router bias loaded. **The production recipe since 8 October 2026** ([docs/20](../docs/20-main-stack.md)) |
+| [**tp3/**](tp3/) | Three nodes on the **old stack** (configurations 1–13). Kept as the record: its `cuda-exl3` build never loads the router bias, so do not deploy it |
+| [**tp2/**](tp2/) | Two nodes, TP=2, expert parallelism off — **still on the old stack**, router bias missing; not yet moved `[not tested]` |
 
 ---
 

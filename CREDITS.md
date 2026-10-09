@@ -98,6 +98,12 @@ kernels for Blackwell plus a fused sparse-MLA attention backend, with a vLLM plu
 - **What we use it for:** everything EXL3. The routed-expert GEMM, the Hadamard input transforms, the
   combine, the MLA decode backend, the expert-parallel path, and the vLLM integration.
 - **Link:** https://github.com/Zeuss5/cuda-exl3
+- **Our fork, used by the vLLM-`main` track since 8 October 2026:**
+  [`NNNtrance/cuda-exl3`](https://github.com/NNNtrance/cuda-exl3/tree/tp3-vllm-main), branch `tp3-vllm-main`,
+  production build `448f1d6`. It is four commits on upstream master `6a1ffc3`: the TP=3 production pieces
+  folded into the plugin, the MoE router-bias load with its boot gate (offered upstream as
+  [Zeuss5/cuda-exl3#8](https://github.com/Zeuss5/cuda-exl3/pull/8)), the routed-expert SwiGLU clamp, and two
+  GEMM-tuner measurement knobs. Same licence as upstream. [docs/20](docs/20-main-stack.md)
 - **Licence:** **MIT** — the repository's `LICENSE` file is the MIT text plus an attribution
   paragraph crediting `turboderp-org/exllamav3` for derived files. Note that GitHub's own licence
   classifier reports `other` / NOASSERTION for the repository, which is what a licence file with an

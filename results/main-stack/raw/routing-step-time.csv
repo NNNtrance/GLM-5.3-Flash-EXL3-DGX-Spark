@@ -1,0 +1,4 @@
+scenario,ms_per_step_router_bias_missing,ms_per_step_router_bias_loaded,distinct_experts_per_rank_per_layer_missing,distinct_experts_per_rank_per_layer_loaded
+"one user, code prompt (8 verification tokens)",70.3,78.2,10.53,13.5
+"four users, mixed (32 verification tokens)",139.4,167.0,29.54,40.77
+"one user, plain prose",67.9,75.6,9.5,12.24

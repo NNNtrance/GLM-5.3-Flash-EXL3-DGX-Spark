@@ -1,0 +1,305 @@
+build,pair_p_q,scope,n_positions,kl_mean,kl_median,kl_p90,kl_p95,kl_p99,kl_max,top1_agreement_ties_included
+"pre-fix (a4f, cuda-exl3 f3e184a)",reference|engine-run1,all,21066,1.75429,0.264827,6.02387,10.5367,16.1676,24.7884,0.637947
+"pre-fix (a4f, cuda-exl3 f3e184a)",reference|engine-run1,dense<2048,9583,0.946678,0.0474286,2.23705,6.6539,14.1644,24.1094,0.774601
+"pre-fix (a4f, cuda-exl3 f3e184a)",reference|engine-run1,sparse>=2048,11483,2.42828,0.642943,8.27942,12.1608,17.2261,24.7884,0.523905
+"pre-fix (a4f, cuda-exl3 f3e184a)",reference|engine-run1,assistant-tokens,6601,0.103276,0.007791,0.306081,0.507621,1.10409,7.98823,0.902439
+"pre-fix (a4f, cuda-exl3 f3e184a)",reference|engine-run1,text:turkish-prose:all,1456,0.197328,0.0348488,0.548181,0.845516,1.88111,6.8684,0.844093
+"pre-fix (a4f, cuda-exl3 f3e184a)",reference|engine-run1,text:turkish-prose:assistant,1362,0.160623,0.0314873,0.449249,0.706585,1.47412,4.31571,0.853891
+"pre-fix (a4f, cuda-exl3 f3e184a)",reference|engine-run1,text:english-prose:all,1148,0.158488,0.064421,0.389765,0.579067,1.20043,7.05366,0.827526
+"pre-fix (a4f, cuda-exl3 f3e184a)",reference|engine-run1,text:english-prose:assistant,1091,0.134294,0.062625,0.344088,0.517216,0.979586,2.13455,0.833181
+"pre-fix (a4f, cuda-exl3 f3e184a)",reference|engine-run1,text:code:all,1770,0.0652618,0.000391655,0.13483,0.312124,1.24902,4.60837,0.948023
+"pre-fix (a4f, cuda-exl3 f3e184a)",reference|engine-run1,text:code:assistant,1660,0.0336178,0.000292636,0.097557,0.203719,0.494524,1.70677,0.962651
+"pre-fix (a4f, cuda-exl3 f3e184a)",reference|engine-run1,text:tool-call:all,1686,1.74023,0.0871694,6.48798,11.1643,16.6014,24.1094,0.700474
+"pre-fix (a4f, cuda-exl3 f3e184a)",reference|engine-run1,text:tool-call:assistant,650,0.0594037,0.000591924,0.190802,0.335283,0.754156,1.41478,0.938462
+"pre-fix (a4f, cuda-exl3 f3e184a)",reference|engine-run1,text:reasoning:all,1475,0.239734,0.00602722,0.519134,0.996758,4.31155,11.1434,0.887458
+"pre-fix (a4f, cuda-exl3 f3e184a)",reference|engine-run1,text:reasoning:assistant,1186,0.105358,0.00264865,0.289468,0.5337,1.29068,7.98823,0.927487
+"pre-fix (a4f, cuda-exl3 f3e184a)",reference|engine-run1,text:long-context-13k:all,13531,2.44502,0.65085,8.39638,12.2244,16.9762,24.7884,0.52413
+"pre-fix (a4f, cuda-exl3 f3e184a)",reference|engine-run1,text:long-context-13k:assistant,652,0.148877,0.0377338,0.413421,0.584162,1.43348,3.28667,0.884969
+"pre-fix (a4f, cuda-exl3 f3e184a)",reference|engine-run2,all,21066,1.74693,0.263702,5.94915,10.5166,16.0214,23.9702,0.640226
+"pre-fix (a4f, cuda-exl3 f3e184a)",reference|engine-run2,dense<2048,9583,0.932071,0.0462582,2.18757,6.28579,14.1287,23.9576,0.776897
+"pre-fix (a4f, cuda-exl3 f3e184a)",reference|engine-run2,sparse>=2048,11483,2.42697,0.629396,8.35044,11.9117,17.3844,23.9702,0.526169
+"pre-fix (a4f, cuda-exl3 f3e184a)",reference|engine-run2,assistant-tokens,6601,0.10264,0.00777918,0.29583,0.48233,1.0877,8.93584,0.903348
+"pre-fix (a4f, cuda-exl3 f3e184a)",reference|engine-run2,text:turkish-prose:all,1456,0.201094,0.0349615,0.52715,0.866323,1.99381,11.6218,0.844093
+"pre-fix (a4f, cuda-exl3 f3e184a)",reference|engine-run2,text:turkish-prose:assistant,1362,0.161196,0.0318043,0.464457,0.712359,1.45769,4.24206,0.851689
+"pre-fix (a4f, cuda-exl3 f3e184a)",reference|engine-run2,text:english-prose:all,1148,0.156889,0.0635545,0.368999,0.580503,1.22581,7.42171,0.83101
+"pre-fix (a4f, cuda-exl3 f3e184a)",reference|engine-run2,text:english-prose:assistant,1091,0.132757,0.0603751,0.341579,0.509646,0.961768,2.10995,0.837764
+"pre-fix (a4f, cuda-exl3 f3e184a)",reference|engine-run2,text:code:all,1770,0.0636688,0.000388982,0.128396,0.304134,1.04202,4.51619,0.950847
+"pre-fix (a4f, cuda-exl3 f3e184a)",reference|engine-run2,text:code:assistant,1660,0.0324232,0.000301798,0.0987876,0.199752,0.458089,1.70677,0.965663
+"pre-fix (a4f, cuda-exl3 f3e184a)",reference|engine-run2,text:tool-call:all,1686,1.72585,0.0950537,6.27583,11.0663,16.5727,23.9576,0.696916
+"pre-fix (a4f, cuda-exl3 f3e184a)",reference|engine-run2,text:tool-call:assistant,650,0.0592308,0.000583928,0.187358,0.328557,0.730048,1.41291,0.936923
+"pre-fix (a4f, cuda-exl3 f3e184a)",reference|engine-run2,text:reasoning:all,1475,0.245575,0.00632445,0.48446,1.01857,4.58459,13.7047,0.888814
+"pre-fix (a4f, cuda-exl3 f3e184a)",reference|engine-run2,text:reasoning:assistant,1186,0.105445,0.00259058,0.283943,0.518676,1.23667,8.93584,0.929174
+"pre-fix (a4f, cuda-exl3 f3e184a)",reference|engine-run2,text:long-context-13k:all,13531,2.43465,0.641439,8.40827,11.9147,17.0788,23.9702,0.527308
+"pre-fix (a4f, cuda-exl3 f3e184a)",reference|engine-run2,text:long-context-13k:assistant,652,0.146868,0.0362886,0.412475,0.594334,1.41583,2.9629,0.881902
+"pre-fix (a4f, cuda-exl3 f3e184a)",engine-run1|engine-run2,all,21066,0.181237,0.0145258,0.25257,0.632225,3.87245,17.493,0.880044
+"pre-fix (a4f, cuda-exl3 f3e184a)",engine-run1|engine-run2,dense<2048,9583,0.10156,0.00296258,0.111479,0.279621,2.13656,17.4795,0.931232
+"pre-fix (a4f, cuda-exl3 f3e184a)",engine-run1|engine-run2,sparse>=2048,11483,0.24773,0.030555,0.394194,0.942276,5.19374,17.493,0.837325
+"pre-fix (a4f, cuda-exl3 f3e184a)",engine-run1|engine-run2,assistant-tokens,6601,0.00943901,0.000608708,0.0252628,0.0425105,0.119152,0.959321,0.973186
+"pre-fix (a4f, cuda-exl3 f3e184a)",engine-run1|engine-run2,text:turkish-prose:all,1456,0.0253584,0.00392708,0.0545897,0.0946075,0.311932,3.29217,0.950549
+"pre-fix (a4f, cuda-exl3 f3e184a)",engine-run1|engine-run2,text:turkish-prose:assistant,1362,0.0189892,0.00359692,0.0495916,0.0815561,0.252693,0.959321,0.952276
+"pre-fix (a4f, cuda-exl3 f3e184a)",engine-run1|engine-run2,text:english-prose:all,1148,0.0126125,0.00370361,0.0235499,0.0379479,0.0892247,2.50693,0.95993
+"pre-fix (a4f, cuda-exl3 f3e184a)",engine-run1|engine-run2,text:english-prose:assistant,1091,0.00912393,0.0037023,0.0228983,0.0353246,0.0676784,0.167906,0.961503
+"pre-fix (a4f, cuda-exl3 f3e184a)",engine-run1|engine-run2,text:code:all,1770,0.00596731,1.93363e-05,0.00776951,0.0178115,0.116316,1.05445,0.984746
+"pre-fix (a4f, cuda-exl3 f3e184a)",engine-run1|engine-run2,text:code:assistant,1660,0.00240723,1.46034e-05,0.00563407,0.0130977,0.0380508,0.290654,0.990361
+"pre-fix (a4f, cuda-exl3 f3e184a)",engine-run1|engine-run2,text:tool-call:all,1686,0.19226,0.00316043,0.205339,0.6546,4.14938,17.4795,0.912218
+"pre-fix (a4f, cuda-exl3 f3e184a)",engine-run1|engine-run2,text:tool-call:assistant,650,0.00534614,3.75486e-05,0.0153198,0.0313093,0.0746968,0.201067,0.978462
+"pre-fix (a4f, cuda-exl3 f3e184a)",engine-run1|engine-run2,text:reasoning:all,1475,0.0280196,0.000499323,0.0407008,0.0817624,0.449977,4.77212,0.968814
+"pre-fix (a4f, cuda-exl3 f3e184a)",engine-run1|engine-run2,text:reasoning:assistant,1186,0.0089068,0.000200867,0.0244381,0.0448651,0.13952,0.401151,0.984823
+"pre-fix (a4f, cuda-exl3 f3e184a)",engine-run1|engine-run2,text:long-context-13k:all,13531,0.250572,0.0309903,0.402773,0.945571,5.23218,17.493,0.838297
+"pre-fix (a4f, cuda-exl3 f3e184a)",engine-run1|engine-run2,text:long-context-13k:assistant,652,0.0129678,0.00244781,0.0342805,0.0471405,0.141701,0.526848,0.966258
+"pre-fix (a4f, cuda-exl3 f3e184a)",reference|reference-bf16-residual,all,21066,0.281079,0.0167476,0.395181,1.03753,6.60075,19.6144,0.86286
+"pre-fix (a4f, cuda-exl3 f3e184a)",reference|reference-bf16-residual,dense<2048,9583,0.163337,0.00209271,0.150899,0.445783,4.11845,19.6144,0.917041
+"pre-fix (a4f, cuda-exl3 f3e184a)",reference|reference-bf16-residual,sparse>=2048,11483,0.379339,0.0449087,0.607753,1.59246,8.08018,19.4879,0.817643
+"pre-fix (a4f, cuda-exl3 f3e184a)",reference|reference-bf16-residual,assistant-tokens,6601,0.00666274,0.000354994,0.0170733,0.0319116,0.0854756,1.75799,0.97258
+"pre-fix (a4f, cuda-exl3 f3e184a)",reference|reference-bf16-residual,text:turkish-prose:all,1456,0.0289243,0.00165601,0.0303287,0.0495979,0.138292,13.1437,0.956731
+"pre-fix (a4f, cuda-exl3 f3e184a)",reference|reference-bf16-residual,text:turkish-prose:assistant,1362,0.00891642,0.00157071,0.026264,0.0377864,0.0864516,0.179322,0.961821
+"pre-fix (a4f, cuda-exl3 f3e184a)",reference|reference-bf16-residual,text:english-prose:all,1148,0.00444273,0.001339,0.0125148,0.0184901,0.0419725,0.129985,0.964286
+"pre-fix (a4f, cuda-exl3 f3e184a)",reference|reference-bf16-residual,text:english-prose:assistant,1091,0.004182,0.00130192,0.0118119,0.0178355,0.0405837,0.118369,0.96517
+"pre-fix (a4f, cuda-exl3 f3e184a)",reference|reference-bf16-residual,text:code:all,1770,0.00972333,3.11732e-05,0.0081726,0.0226106,0.117767,2.61755,0.978531
+"pre-fix (a4f, cuda-exl3 f3e184a)",reference|reference-bf16-residual,text:code:assistant,1660,0.00270623,2.46439e-05,0.00553652,0.0135505,0.0533913,0.153612,0.987952
+"pre-fix (a4f, cuda-exl3 f3e184a)",reference|reference-bf16-residual,text:tool-call:all,1686,0.382702,0.0045598,0.519781,1.7856,9.1935,15.5821,0.867734
+"pre-fix (a4f, cuda-exl3 f3e184a)",reference|reference-bf16-residual,text:tool-call:assistant,650,0.0045425,4.0843e-05,0.0109601,0.0247643,0.0714463,0.271062,0.983077
+"pre-fix (a4f, cuda-exl3 f3e184a)",reference|reference-bf16-residual,text:reasoning:all,1475,0.041372,0.000606021,0.0465006,0.11358,0.513527,13.6063,0.958644
+"pre-fix (a4f, cuda-exl3 f3e184a)",reference|reference-bf16-residual,text:reasoning:assistant,1186,0.0103077,0.00019035,0.0284675,0.0496451,0.154951,0.396596,0.973862
+"pre-fix (a4f, cuda-exl3 f3e184a)",reference|reference-bf16-residual,text:long-context-13k:all,13531,0.380646,0.0454144,0.613024,1.58095,7.97631,19.6144,0.817974
+"pre-fix (a4f, cuda-exl3 f3e184a)",reference|reference-bf16-residual,text:long-context-13k:assistant,652,0.0116628,0.00124334,0.0234696,0.0423742,0.114151,1.75799,0.955521
+"pre-fix (a4f, cuda-exl3 f3e184a)",reference|reference-no-clamp,all,21066,0.250733,0.014517,0.348693,0.940173,5.613,20.5941,0.871499
+"pre-fix (a4f, cuda-exl3 f3e184a)",reference|reference-no-clamp,dense<2048,9583,0.138584,0.00178072,0.120191,0.367094,3.33136,18.9199,0.928519
+"pre-fix (a4f, cuda-exl3 f3e184a)",reference|reference-no-clamp,sparse>=2048,11483,0.344325,0.0389126,0.567136,1.42848,7.0158,20.5941,0.823914
+"pre-fix (a4f, cuda-exl3 f3e184a)",reference|reference-no-clamp,assistant-tokens,6601,0.00606449,0.000316049,0.0151296,0.0293752,0.0884583,0.447433,0.978185
+"pre-fix (a4f, cuda-exl3 f3e184a)",reference|reference-no-clamp,text:turkish-prose:all,1456,0.014473,0.00126439,0.0254935,0.0417752,0.129832,5.55086,0.96772
+"pre-fix (a4f, cuda-exl3 f3e184a)",reference|reference-no-clamp,text:turkish-prose:assistant,1362,0.00781226,0.00113342,0.0217628,0.0380302,0.0774964,0.264485,0.969897
+"pre-fix (a4f, cuda-exl3 f3e184a)",reference|reference-no-clamp,text:english-prose:all,1148,0.00488409,0.00128027,0.0105322,0.0176043,0.0475683,0.259828,0.966028
+"pre-fix (a4f, cuda-exl3 f3e184a)",reference|reference-no-clamp,text:english-prose:assistant,1091,0.0042541,0.00127932,0.0102165,0.0159743,0.0390531,0.18461,0.969753
+"pre-fix (a4f, cuda-exl3 f3e184a)",reference|reference-no-clamp,text:code:all,1770,0.0081306,2.52015e-05,0.00600026,0.0161755,0.0777247,5.16608,0.984746
+"pre-fix (a4f, cuda-exl3 f3e184a)",reference|reference-no-clamp,text:code:assistant,1660,0.0020082,2.05343e-05,0.00393654,0.0109323,0.033832,0.108497,0.991566
+"pre-fix (a4f, cuda-exl3 f3e184a)",reference|reference-no-clamp,text:tool-call:all,1686,0.340141,0.00384337,0.4457,1.35634,9.27708,17.0611,0.883155
+"pre-fix (a4f, cuda-exl3 f3e184a)",reference|reference-no-clamp,text:tool-call:assistant,650,0.00512706,2.88179e-05,0.00957515,0.0196461,0.0883041,0.447433,0.98
+"pre-fix (a4f, cuda-exl3 f3e184a)",reference|reference-no-clamp,text:reasoning:all,1475,0.0270231,0.000456286,0.0438076,0.0898202,0.370483,6.12721,0.969492
+"pre-fix (a4f, cuda-exl3 f3e184a)",reference|reference-no-clamp,text:reasoning:assistant,1186,0.010248,0.000221177,0.0268519,0.0550016,0.144328,0.383733,0.980607
+"pre-fix (a4f, cuda-exl3 f3e184a)",reference|reference-no-clamp,text:long-context-13k:all,13531,0.341994,0.039519,0.565647,1.42639,6.87836,20.5941,0.826177
+"pre-fix (a4f, cuda-exl3 f3e184a)",reference|reference-no-clamp,text:long-context-13k:assistant,652,0.0090948,0.00124442,0.0237116,0.0406648,0.0984609,0.228944,0.969325
+"pre-fix (a4f, cuda-exl3 f3e184a)",reference|reference-bf16-logits,all,21066,0.000123631,6.946e-05,0.000319713,0.000481195,0.000869048,0.00163306,1
+"pre-fix (a4f, cuda-exl3 f3e184a)",reference|reference-bf16-logits,dense<2048,9583,0.000122182,3.85704e-05,0.000365533,0.000541469,0.000903857,0.00161584,1
+"pre-fix (a4f, cuda-exl3 f3e184a)",reference|reference-bf16-logits,sparse>=2048,11483,0.000124841,8.23488e-05,0.00028456,0.000424519,0.000818223,0.00163306,1
+"pre-fix (a4f, cuda-exl3 f3e184a)",reference|reference-bf16-logits,assistant-tokens,6601,0.000115411,1.25733e-05,0.000368793,0.000565773,0.000975363,0.00161584,1
+"pre-fix (a4f, cuda-exl3 f3e184a)",reference|reference-bf16-logits,text:turkish-prose:all,1456,0.000115607,4.28568e-05,0.000311313,0.000510852,0.000868939,0.00150453,1
+"pre-fix (a4f, cuda-exl3 f3e184a)",reference|reference-bf16-logits,text:turkish-prose:assistant,1362,0.000114272,3.82213e-05,0.000311866,0.000512261,0.000861924,0.00125725,1
+"pre-fix (a4f, cuda-exl3 f3e184a)",reference|reference-bf16-logits,text:english-prose:all,1148,0.000237698,0.000154224,0.000616483,0.000778697,0.0011117,0.0014354,1
+"pre-fix (a4f, cuda-exl3 f3e184a)",reference|reference-bf16-logits,text:english-prose:assistant,1091,0.000241302,0.0001559,0.000627408,0.00078586,0.00111667,0.0014354,1
+"pre-fix (a4f, cuda-exl3 f3e184a)",reference|reference-bf16-logits,text:code:all,1770,6.19156e-05,6.47041e-07,0.00020205,0.000378617,0.00079884,0.00157108,1
+"pre-fix (a4f, cuda-exl3 f3e184a)",reference|reference-bf16-logits,text:code:assistant,1660,5.83056e-05,4.51339e-07,0.000193858,0.000368117,0.00079953,0.00157108,1
+"pre-fix (a4f, cuda-exl3 f3e184a)",reference|reference-bf16-logits,text:tool-call:all,1686,0.000109039,3.25507e-05,0.000329468,0.000464555,0.000800514,0.00161584,1
+"pre-fix (a4f, cuda-exl3 f3e184a)",reference|reference-bf16-logits,text:tool-call:assistant,650,8.14598e-05,9.06209e-07,0.00029154,0.000442167,0.000801841,0.00161584,1
+"pre-fix (a4f, cuda-exl3 f3e184a)",reference|reference-bf16-logits,text:reasoning:all,1475,9.98646e-05,6.60094e-06,0.000314573,0.000535106,0.000856948,0.00159182,1
+"pre-fix (a4f, cuda-exl3 f3e184a)",reference|reference-bf16-logits,text:reasoning:assistant,1186,9.41345e-05,2.87842e-06,0.000314864,0.000531475,0.000861471,0.00157138,1
+"pre-fix (a4f, cuda-exl3 f3e184a)",reference|reference-bf16-logits,text:long-context-13k:all,13531,0.000127299,8.30843e-05,0.00029537,0.000444041,0.000824315,0.00163306,1
+"pre-fix (a4f, cuda-exl3 f3e184a)",reference|reference-bf16-logits,text:long-context-13k:assistant,652,0.000125075,4.57369e-05,0.000358368,0.000578106,0.000921999,0.00128784,1
+"pre-fix (a4f, cuda-exl3 f3e184a)",reference-no-clamp|engine-run1,all,21066,1.72327,0.26147,5.84486,10.3251,16.1978,23.8351,0.637473
+"pre-fix (a4f, cuda-exl3 f3e184a)",reference-no-clamp|engine-run1,dense<2048,9583,0.927722,0.0493661,2.15428,6.31684,14.0271,23.0778,0.774497
+"pre-fix (a4f, cuda-exl3 f3e184a)",reference-no-clamp|engine-run1,sparse>=2048,11483,2.38719,0.625594,8.13656,11.9867,17.1026,23.8351,0.523121
+"pre-fix (a4f, cuda-exl3 f3e184a)",reference-no-clamp|engine-run1,assistant-tokens,6601,0.103175,0.00765415,0.299236,0.500663,1.12719,7.61967,0.902288
+"pre-fix (a4f, cuda-exl3 f3e184a)",reference-no-clamp|engine-run1,text:turkish-prose:all,1456,0.189846,0.0393925,0.527133,0.831346,1.67559,6.65667,0.848214
+"pre-fix (a4f, cuda-exl3 f3e184a)",reference-no-clamp|engine-run1,text:turkish-prose:assistant,1362,0.159763,0.0328947,0.445064,0.702384,1.46195,4.27932,0.856828
+"pre-fix (a4f, cuda-exl3 f3e184a)",reference-no-clamp|engine-run1,text:english-prose:all,1148,0.16017,0.0656354,0.393694,0.568358,1.35548,8.00862,0.830139
+"pre-fix (a4f, cuda-exl3 f3e184a)",reference-no-clamp|engine-run1,text:english-prose:assistant,1091,0.135059,0.0625611,0.36128,0.516313,0.943674,2.10009,0.837764
+"pre-fix (a4f, cuda-exl3 f3e184a)",reference-no-clamp|engine-run1,text:code:all,1770,0.0706574,0.000385018,0.140425,0.31535,1.39009,5.05402,0.946893
+"pre-fix (a4f, cuda-exl3 f3e184a)",reference-no-clamp|engine-run1,text:code:assistant,1660,0.0336833,0.000267668,0.0896072,0.188518,0.512638,1.78238,0.963253
+"pre-fix (a4f, cuda-exl3 f3e184a)",reference-no-clamp|engine-run1,text:tool-call:all,1686,1.71384,0.0917148,6.2831,10.7465,16.8048,22.3864,0.701068
+"pre-fix (a4f, cuda-exl3 f3e184a)",reference-no-clamp|engine-run1,text:tool-call:assistant,650,0.0628842,0.00054598,0.191297,0.294981,0.766362,2.48514,0.932308
+"pre-fix (a4f, cuda-exl3 f3e184a)",reference-no-clamp|engine-run1,text:reasoning:all,1475,0.239321,0.00622555,0.493257,0.963355,4.24653,13.9953,0.886102
+"pre-fix (a4f, cuda-exl3 f3e184a)",reference-no-clamp|engine-run1,text:reasoning:assistant,1186,0.103766,0.00260441,0.285611,0.530359,1.37861,7.61967,0.922428
+"pre-fix (a4f, cuda-exl3 f3e184a)",reference-no-clamp|engine-run1,text:long-context-13k:all,13531,2.40001,0.632164,8.23586,12.0054,16.9505,23.8351,0.522947
+"pre-fix (a4f, cuda-exl3 f3e184a)",reference-no-clamp|engine-run1,text:long-context-13k:assistant,652,0.14763,0.0361296,0.416367,0.606681,1.48702,3.34759,0.883436
+"pre-fix (a4f, cuda-exl3 f3e184a)",reference-bf16-residual|engine-run1,all,21066,1.7188,0.263524,5.85577,10.2352,16.1341,24.8198,0.638754
+"pre-fix (a4f, cuda-exl3 f3e184a)",reference-bf16-residual|engine-run1,dense<2048,9583,0.937631,0.0502242,2.19381,6.28888,13.9982,24.3829,0.773975
+"pre-fix (a4f, cuda-exl3 f3e184a)",reference-bf16-residual|engine-run1,sparse>=2048,11483,2.37072,0.617048,7.94574,11.9673,16.8013,24.8198,0.525908
+"pre-fix (a4f, cuda-exl3 f3e184a)",reference-bf16-residual|engine-run1,assistant-tokens,6601,0.104794,0.00821493,0.303182,0.502931,1.13079,8.32389,0.902742
+"pre-fix (a4f, cuda-exl3 f3e184a)",reference-bf16-residual|engine-run1,text:turkish-prose:all,1456,0.203374,0.036615,0.572475,0.86576,1.89206,7.09213,0.842033
+"pre-fix (a4f, cuda-exl3 f3e184a)",reference-bf16-residual|engine-run1,text:turkish-prose:assistant,1362,0.164272,0.0326431,0.469067,0.737699,1.48743,4.42052,0.851689
+"pre-fix (a4f, cuda-exl3 f3e184a)",reference-bf16-residual|engine-run1,text:english-prose:all,1148,0.158717,0.0640558,0.401536,0.583758,1.21593,6.01029,0.831882
+"pre-fix (a4f, cuda-exl3 f3e184a)",reference-bf16-residual|engine-run1,text:english-prose:assistant,1091,0.135194,0.0601591,0.349186,0.512295,1.01756,1.7905,0.839597
+"pre-fix (a4f, cuda-exl3 f3e184a)",reference-bf16-residual|engine-run1,text:code:all,1770,0.0642463,0.000367118,0.127532,0.304366,1.25911,4.57785,0.951412
+"pre-fix (a4f, cuda-exl3 f3e184a)",reference-bf16-residual|engine-run1,text:code:assistant,1660,0.0331825,0.000279669,0.0944879,0.195676,0.495983,1.77262,0.965663
+"pre-fix (a4f, cuda-exl3 f3e184a)",reference-bf16-residual|engine-run1,text:tool-call:all,1686,1.72541,0.0858173,6.20691,10.8174,17.0459,24.3829,0.69395
+"pre-fix (a4f, cuda-exl3 f3e184a)",reference-bf16-residual|engine-run1,text:tool-call:assistant,650,0.0625246,0.000490532,0.192984,0.335204,0.768781,1.88535,0.936923
+"pre-fix (a4f, cuda-exl3 f3e184a)",reference-bf16-residual|engine-run1,text:reasoning:all,1475,0.247139,0.00617952,0.480474,0.928049,4.82726,13.9807,0.884746
+"pre-fix (a4f, cuda-exl3 f3e184a)",reference-bf16-residual|engine-run1,text:reasoning:assistant,1186,0.106904,0.00258847,0.285508,0.529059,1.50093,8.32389,0.924115
+"pre-fix (a4f, cuda-exl3 f3e184a)",reference-bf16-residual|engine-run1,text:long-context-13k:all,13531,2.39027,0.627795,8.0425,11.9731,16.8595,24.8198,0.525903
+"pre-fix (a4f, cuda-exl3 f3e184a)",reference-bf16-residual|engine-run1,text:long-context-13k:assistant,652,0.150301,0.0334332,0.405346,0.655934,1.31772,3.61233,0.881902
+"pre-fix (a4f, cuda-exl3 f3e184a)",reference|engine-prefix-cache-path,all,3547,2.27648,0.475839,8.25355,12.1979,17.1976,22.9707,0.629911
+"pre-fix (a4f, cuda-exl3 f3e184a)",reference|engine-prefix-cache-path,assistant-tokens,652,0.145772,0.0377034,0.407666,0.627148,1.25973,3.22302,0.880368
+"pre-fix (a4f, cuda-exl3 f3e184a)",reference|engine-prefix-cache-path,text:long-context-13k:all,3547,2.27648,0.475839,8.25355,12.1979,17.1976,22.9707,0.629911
+"pre-fix (a4f, cuda-exl3 f3e184a)",reference|engine-prefix-cache-path,text:long-context-13k:assistant,652,0.145772,0.0377034,0.407666,0.627148,1.25973,3.22302,0.880368
+"pre-fix (a4f, cuda-exl3 f3e184a)",engine-run1|engine-prefix-cache-path,all,3547,0.240575,0.0228322,0.380629,0.980506,4.80761,14.4876,0.847477
+"pre-fix (a4f, cuda-exl3 f3e184a)",engine-run1|engine-prefix-cache-path,assistant-tokens,652,0.0129249,0.00264582,0.0350787,0.0577744,0.142143,0.199816,0.960123
+"pre-fix (a4f, cuda-exl3 f3e184a)",engine-run1|engine-prefix-cache-path,text:long-context-13k:all,3547,0.240575,0.0228322,0.380629,0.980506,4.80761,14.4876,0.847477
+"pre-fix (a4f, cuda-exl3 f3e184a)",engine-run1|engine-prefix-cache-path,text:long-context-13k:assistant,652,0.0129249,0.00264582,0.0350787,0.0577744,0.142143,0.199816,0.960123
+"bias-fix (a4g, cuda-exl3 1451b1a)",reference|engine-run1,all,21066,0.325541,0.0190462,0.463742,1.35009,7.00739,24.9415,0.85797
+"bias-fix (a4g, cuda-exl3 1451b1a)",reference|engine-run1,dense<2048,9583,0.175515,0.00264377,0.168626,0.480657,4.30005,18.4016,0.919232
+"bias-fix (a4g, cuda-exl3 1451b1a)",reference|engine-run1,sparse>=2048,11483,0.450743,0.0502237,0.797245,2.08093,8.56953,24.9415,0.806845
+"bias-fix (a4g, cuda-exl3 1451b1a)",reference|engine-run1,assistant-tokens,6601,0.00841066,0.000480972,0.021507,0.0402172,0.111835,0.832337,0.975761
+"bias-fix (a4g, cuda-exl3 1451b1a)",reference|engine-run1,text:turkish-prose:all,1456,0.0229434,0.00208758,0.0367677,0.0625636,0.181073,5.94676,0.960165
+"bias-fix (a4g, cuda-exl3 1451b1a)",reference|engine-run1,text:turkish-prose:assistant,1362,0.0127604,0.00185726,0.0341411,0.0532785,0.136562,0.832337,0.961821
+"bias-fix (a4g, cuda-exl3 1451b1a)",reference|engine-run1,text:english-prose:all,1148,0.0066102,0.00213361,0.0154234,0.0243461,0.0652776,0.22811,0.973868
+"bias-fix (a4g, cuda-exl3 1451b1a)",reference|engine-run1,text:english-prose:assistant,1091,0.00558166,0.00204945,0.0148586,0.0220052,0.0434653,0.147175,0.974335
+"bias-fix (a4g, cuda-exl3 1451b1a)",reference|engine-run1,text:code:all,1770,0.011304,3.81393e-05,0.0102566,0.0228569,0.118985,3.39765,0.988701
+"bias-fix (a4g, cuda-exl3 1451b1a)",reference|engine-run1,text:code:assistant,1660,0.00283664,2.88861e-05,0.00706423,0.0166083,0.0516241,0.127436,0.995783
+"bias-fix (a4g, cuda-exl3 1451b1a)",reference|engine-run1,text:tool-call:all,1686,0.413868,0.00501823,0.57717,2.05569,9.27591,18.4016,0.866548
+"bias-fix (a4g, cuda-exl3 1451b1a)",reference|engine-run1,text:tool-call:assistant,650,0.0054073,5.49156e-05,0.0146137,0.0291984,0.0788375,0.288034,0.973846
+"bias-fix (a4g, cuda-exl3 1451b1a)",reference|engine-run1,text:reasoning:all,1475,0.0321582,0.000657659,0.0570667,0.112547,0.361379,8.0384,0.966102
+"bias-fix (a4g, cuda-exl3 1451b1a)",reference|engine-run1,text:reasoning:assistant,1186,0.0123108,0.000259352,0.0376649,0.0701706,0.15735,0.3377,0.975548
+"bias-fix (a4g, cuda-exl3 1451b1a)",reference|engine-run1,text:long-context-13k:all,13531,0.447242,0.0498052,0.784849,2.06216,8.52044,24.9415,0.807184
+"bias-fix (a4g, cuda-exl3 1451b1a)",reference|engine-run1,text:long-context-13k:assistant,652,0.0141494,0.00236129,0.033223,0.063861,0.167496,0.595796,0.958589
+"bias-fix (a4g, cuda-exl3 1451b1a)",reference|engine-run2,all,21066,0.334767,0.0188072,0.471425,1.30712,7.80273,22.8727,0.857543
+"bias-fix (a4g, cuda-exl3 1451b1a)",reference|engine-run2,dense<2048,9583,0.192088,0.00278524,0.174822,0.52302,5.08294,22.8727,0.91558
+"bias-fix (a4g, cuda-exl3 1451b1a)",reference|engine-run2,sparse>=2048,11483,0.453838,0.0490448,0.797339,2.04887,9.32042,21.7379,0.809109
+"bias-fix (a4g, cuda-exl3 1451b1a)",reference|engine-run2,assistant-tokens,6601,0.00807979,0.000464753,0.0212265,0.0387793,0.116228,0.635708,0.977579
+"bias-fix (a4g, cuda-exl3 1451b1a)",reference|engine-run2,text:turkish-prose:all,1456,0.029224,0.00198099,0.0379318,0.0628365,0.217504,11.572,0.957418
+"bias-fix (a4g, cuda-exl3 1451b1a)",reference|engine-run2,text:turkish-prose:assistant,1362,0.0116927,0.00172308,0.0327492,0.05493,0.125105,0.430023,0.965492
+"bias-fix (a4g, cuda-exl3 1451b1a)",reference|engine-run2,text:english-prose:all,1148,0.00699321,0.00246541,0.0163249,0.0268998,0.0660185,0.285991,0.96777
+"bias-fix (a4g, cuda-exl3 1451b1a)",reference|engine-run2,text:english-prose:assistant,1091,0.0061646,0.00234451,0.0154569,0.0258593,0.0516798,0.154025,0.969753
+"bias-fix (a4g, cuda-exl3 1451b1a)",reference|engine-run2,text:code:all,1770,0.0115943,3.38926e-05,0.00756744,0.0222289,0.138168,6.96581,0.985876
+"bias-fix (a4g, cuda-exl3 1451b1a)",reference|engine-run2,text:code:assistant,1660,0.00286419,2.75752e-05,0.00582578,0.0125123,0.0466423,0.517679,0.993373
+"bias-fix (a4g, cuda-exl3 1451b1a)",reference|engine-run2,text:tool-call:all,1686,0.432541,0.00513394,0.603939,1.92877,9.54017,22.8727,0.867734
+"bias-fix (a4g, cuda-exl3 1451b1a)",reference|engine-run2,text:tool-call:assistant,650,0.00590973,4.49057e-05,0.0134403,0.0278345,0.113828,0.387048,0.989231
+"bias-fix (a4g, cuda-exl3 1451b1a)",reference|engine-run2,text:reasoning:all,1475,0.035991,0.000754875,0.0574611,0.115198,0.427015,12.9362,0.96339
+"bias-fix (a4g, cuda-exl3 1451b1a)",reference|engine-run2,text:reasoning:assistant,1186,0.0117818,0.000264182,0.0337723,0.0651541,0.153457,0.300309,0.978078
+"bias-fix (a4g, cuda-exl3 1451b1a)",reference|engine-run2,text:long-context-13k:all,13531,0.458115,0.0490493,0.784355,2.05549,9.40304,21.7379,0.807849
+"bias-fix (a4g, cuda-exl3 1451b1a)",reference|engine-run2,text:long-context-13k:assistant,652,0.0124458,0.00183215,0.0313574,0.0529639,0.130892,0.635708,0.96319
+"bias-fix (a4g, cuda-exl3 1451b1a)",engine-run1|engine-run2,all,21066,0.280675,0.0182288,0.417626,1.10893,5.93131,20.0889,0.864948
+"bias-fix (a4g, cuda-exl3 1451b1a)",engine-run1|engine-run2,dense<2048,9583,0.143775,0.00257833,0.149237,0.434104,3.31123,20.0889,0.923406
+"bias-fix (a4g, cuda-exl3 1451b1a)",engine-run1|engine-run2,sparse>=2048,11483,0.394923,0.0468478,0.694235,1.81688,7.44224,19.2259,0.816163
+"bias-fix (a4g, cuda-exl3 1451b1a)",engine-run1|engine-run2,assistant-tokens,6601,0.00812858,0.000449876,0.0203656,0.038309,0.103644,1.32703,0.976973
+"bias-fix (a4g, cuda-exl3 1451b1a)",engine-run1|engine-run2,text:turkish-prose:all,1456,0.0182377,0.00195121,0.0318865,0.0587464,0.190508,4.59127,0.957418
+"bias-fix (a4g, cuda-exl3 1451b1a)",engine-run1|engine-run2,text:turkish-prose:assistant,1362,0.0109712,0.00176915,0.0284155,0.0486647,0.111208,0.379764,0.963289
+"bias-fix (a4g, cuda-exl3 1451b1a)",engine-run1|engine-run2,text:english-prose:all,1148,0.00600622,0.00218643,0.0151693,0.0220466,0.0636506,0.18128,0.972997
+"bias-fix (a4g, cuda-exl3 1451b1a)",engine-run1|engine-run2,text:english-prose:assistant,1091,0.00542201,0.00215975,0.0146753,0.0205709,0.0517701,0.080578,0.973419
+"bias-fix (a4g, cuda-exl3 1451b1a)",engine-run1|engine-run2,text:code:all,1770,0.0166301,2.85454e-05,0.00952831,0.0260838,0.181354,9.28753,0.985311
+"bias-fix (a4g, cuda-exl3 1451b1a)",engine-run1|engine-run2,text:code:assistant,1660,0.00332315,2.33633e-05,0.00717589,0.0166825,0.0547542,0.600386,0.993976
+"bias-fix (a4g, cuda-exl3 1451b1a)",engine-run1|engine-run2,text:tool-call:all,1686,0.328735,0.00545184,0.513338,1.54523,6.98445,20.0889,0.884935
+"bias-fix (a4g, cuda-exl3 1451b1a)",engine-run1|engine-run2,text:tool-call:assistant,650,0.0063241,4.09262e-05,0.0145898,0.0276244,0.101257,0.560031,0.987692
+"bias-fix (a4g, cuda-exl3 1451b1a)",engine-run1|engine-run2,text:reasoning:all,1475,0.0297458,0.000518248,0.0557481,0.116665,0.551226,2.29827,0.959322
+"bias-fix (a4g, cuda-exl3 1451b1a)",engine-run1|engine-run2,text:reasoning:assistant,1186,0.0115604,0.000200424,0.0363498,0.061138,0.154534,0.334702,0.978921
+"bias-fix (a4g, cuda-exl3 1451b1a)",engine-run1|engine-run2,text:long-context-13k:all,13531,0.388123,0.0463443,0.686115,1.75599,7.4327,19.2259,0.817308
+"bias-fix (a4g, cuda-exl3 1451b1a)",engine-run1|engine-run2,text:long-context-13k:assistant,652,0.0145105,0.00216555,0.0304379,0.0568532,0.177713,1.32703,0.953988
+"bias-fix (a4g, cuda-exl3 1451b1a)",reference-no-clamp|engine-run1,all,21066,0.302086,0.0185328,0.435687,1.2228,6.61434,24.7499,0.86172
+"bias-fix (a4g, cuda-exl3 1451b1a)",reference-no-clamp|engine-run1,dense<2048,9583,0.164723,0.00257474,0.162494,0.46057,4.20909,16.6002,0.920171
+"bias-fix (a4g, cuda-exl3 1451b1a)",reference-no-clamp|engine-run1,sparse>=2048,11483,0.416722,0.0476314,0.714726,1.94038,7.80088,24.7499,0.812941
+"bias-fix (a4g, cuda-exl3 1451b1a)",reference-no-clamp|engine-run1,assistant-tokens,6601,0.00854693,0.000466526,0.0224742,0.0431208,0.111685,0.843355,0.977428
+"bias-fix (a4g, cuda-exl3 1451b1a)",reference-no-clamp|engine-run1,text:turkish-prose:all,1456,0.0251919,0.00179481,0.0374238,0.0658107,0.256326,11.5799,0.958104
+"bias-fix (a4g, cuda-exl3 1451b1a)",reference-no-clamp|engine-run1,text:turkish-prose:assistant,1362,0.012309,0.00159892,0.0333225,0.0549443,0.112587,0.843355,0.960352
+"bias-fix (a4g, cuda-exl3 1451b1a)",reference-no-clamp|engine-run1,text:english-prose:all,1148,0.00615687,0.00197701,0.0127599,0.0210611,0.0596312,0.357283,0.978223
+"bias-fix (a4g, cuda-exl3 1451b1a)",reference-no-clamp|engine-run1,text:english-prose:assistant,1091,0.00491275,0.00185642,0.0120602,0.0186576,0.0410985,0.123297,0.980752
+"bias-fix (a4g, cuda-exl3 1451b1a)",reference-no-clamp|engine-run1,text:code:all,1770,0.0149222,3.30633e-05,0.00953859,0.0257969,0.188002,3.98516,0.984181
+"bias-fix (a4g, cuda-exl3 1451b1a)",reference-no-clamp|engine-run1,text:code:assistant,1660,0.00317959,2.77635e-05,0.00646955,0.01679,0.0592435,0.18136,0.993976
+"bias-fix (a4g, cuda-exl3 1451b1a)",reference-no-clamp|engine-run1,text:tool-call:all,1686,0.396044,0.00560837,0.577312,2.05798,8.9842,16.0448,0.870107
+"bias-fix (a4g, cuda-exl3 1451b1a)",reference-no-clamp|engine-run1,text:tool-call:assistant,650,0.00642966,5.31999e-05,0.0136859,0.0285335,0.0706217,0.567676,0.98
+"bias-fix (a4g, cuda-exl3 1451b1a)",reference-no-clamp|engine-run1,text:reasoning:all,1475,0.0327023,0.000789578,0.0609684,0.120972,0.532369,3.30884,0.965424
+"bias-fix (a4g, cuda-exl3 1451b1a)",reference-no-clamp|engine-run1,text:reasoning:assistant,1186,0.0139589,0.000256468,0.0440076,0.0756904,0.157975,0.360382,0.979764
+"bias-fix (a4g, cuda-exl3 1451b1a)",reference-no-clamp|engine-run1,text:long-context-13k:all,13531,0.412211,0.0477868,0.695431,1.90506,7.79331,24.7499,0.813096
+"bias-fix (a4g, cuda-exl3 1451b1a)",reference-no-clamp|engine-run1,text:long-context-13k:assistant,652,0.0127009,0.0020192,0.0359394,0.0635343,0.12119,0.399631,0.958589
+"bias-fix (a4g, cuda-exl3 1451b1a)",reference|engine-prefix-cache-path,all,3547,0.426407,0.0366477,0.672096,1.98032,9.55416,19.0292,0.837901
+"bias-fix (a4g, cuda-exl3 1451b1a)",reference|engine-prefix-cache-path,assistant-tokens,652,0.013986,0.00185605,0.0415153,0.071456,0.150796,0.31646,0.964724
+"bias-fix (a4g, cuda-exl3 1451b1a)",reference|engine-prefix-cache-path,text:long-context-13k:all,3547,0.426407,0.0366477,0.672096,1.98032,9.55416,19.0292,0.837901
+"bias-fix (a4g, cuda-exl3 1451b1a)",reference|engine-prefix-cache-path,text:long-context-13k:assistant,652,0.013986,0.00185605,0.0415153,0.071456,0.150796,0.31646,0.964724
+"bias-fix (a4g, cuda-exl3 1451b1a)",engine-run1|engine-prefix-cache-path,all,3547,0.3489,0.0337514,0.598791,1.65734,6.73753,17.9309,0.833944
+"bias-fix (a4g, cuda-exl3 1451b1a)",engine-run1|engine-prefix-cache-path,assistant-tokens,652,0.0135622,0.00177751,0.0322588,0.0578423,0.166401,0.753273,0.960123
+"bias-fix (a4g, cuda-exl3 1451b1a)",engine-run1|engine-prefix-cache-path,text:long-context-13k:all,3547,0.3489,0.0337514,0.598791,1.65734,6.73753,17.9309,0.833944
+"bias-fix (a4g, cuda-exl3 1451b1a)",engine-run1|engine-prefix-cache-path,text:long-context-13k:assistant,652,0.0135622,0.00177751,0.0322588,0.0578423,0.166401,0.753273,0.960123
+"production (a4i, cuda-exl3 448f1d6), gmu 0.75",reference|engine-run1,all,21066,0.334285,0.0191694,0.462796,1.3553,7.72228,21.6846,0.858208
+"production (a4i, cuda-exl3 448f1d6), gmu 0.75",reference|engine-run1,dense<2048,9583,0.183571,0.00270677,0.161217,0.478319,4.70571,19.8894,0.922363
+"production (a4i, cuda-exl3 448f1d6), gmu 0.75",reference|engine-run1,sparse>=2048,11483,0.460062,0.05003,0.763859,2.15458,9.06893,21.6846,0.804668
+"production (a4i, cuda-exl3 448f1d6), gmu 0.75",reference|engine-run1,assistant-tokens,6601,0.00827898,0.000469759,0.0213498,0.0373152,0.110043,0.940965,0.979094
+"production (a4i, cuda-exl3 448f1d6), gmu 0.75",reference|engine-run1,text:turkish-prose:all,1456,0.0210834,0.0019249,0.0350597,0.0641336,0.172817,4.88155,0.971841
+"production (a4i, cuda-exl3 448f1d6), gmu 0.75",reference|engine-run1,text:turkish-prose:assistant,1362,0.0118438,0.00174109,0.0295415,0.0514325,0.115336,0.940965,0.975037
+"production (a4i, cuda-exl3 448f1d6), gmu 0.75",reference|engine-run1,text:english-prose:all,1148,0.0065258,0.00210486,0.0144707,0.0245883,0.062789,0.375856,0.972125
+"production (a4i, cuda-exl3 448f1d6), gmu 0.75",reference|engine-run1,text:english-prose:assistant,1091,0.00544994,0.00203592,0.0132198,0.0227869,0.0460501,0.102331,0.972502
+"production (a4i, cuda-exl3 448f1d6), gmu 0.75",reference|engine-run1,text:code:all,1770,0.0143111,3.74319e-05,0.00933382,0.0230371,0.164772,10.3152,0.985876
+"production (a4i, cuda-exl3 448f1d6), gmu 0.75",reference|engine-run1,text:code:assistant,1660,0.00327601,3.07631e-05,0.00616224,0.0148877,0.0555392,0.469884,0.993373
+"production (a4i, cuda-exl3 448f1d6), gmu 0.75",reference|engine-run1,text:tool-call:all,1686,0.420381,0.00521836,0.541058,2.01623,10.1786,16.1396,0.872479
+"production (a4i, cuda-exl3 448f1d6), gmu 0.75",reference|engine-run1,text:tool-call:assistant,650,0.00580009,5.66742e-05,0.0167825,0.0334765,0.0900822,0.183703,0.978462
+"production (a4i, cuda-exl3 448f1d6), gmu 0.75",reference|engine-run1,text:reasoning:all,1475,0.0381302,0.000665672,0.0541738,0.120854,0.413592,10.8992,0.968136
+"production (a4i, cuda-exl3 448f1d6), gmu 0.75",reference|engine-run1,text:reasoning:assistant,1186,0.012502,0.000261631,0.0326605,0.0673343,0.185337,0.674123,0.979764
+"production (a4i, cuda-exl3 448f1d6), gmu 0.75",reference|engine-run1,text:long-context-13k:all,13531,0.459207,0.0500677,0.759142,2.14147,9.06921,21.6846,0.805853
+"production (a4i, cuda-exl3 448f1d6), gmu 0.75",reference|engine-run1,text:long-context-13k:assistant,652,0.0130933,0.00182185,0.0302717,0.0508064,0.133403,0.719953,0.961656
+"production (a4i, cuda-exl3 448f1d6), gmu 0.75",reference-no-clamp|engine-run1,all,21066,0.308142,0.01867,0.440225,1.28088,6.96349,21.1712,0.859822
+"production (a4i, cuda-exl3 448f1d6), gmu 0.75",reference-no-clamp|engine-run1,dense<2048,9583,0.173581,0.00272916,0.153123,0.468688,4.89869,21.1712,0.921841
+"production (a4i, cuda-exl3 448f1d6), gmu 0.75",reference-no-clamp|engine-run1,sparse>=2048,11483,0.420438,0.0480668,0.726041,1.91719,8.33506,20.5558,0.808064
+"production (a4i, cuda-exl3 448f1d6), gmu 0.75",reference-no-clamp|engine-run1,assistant-tokens,6601,0.00840053,0.000450323,0.0211,0.0388288,0.108332,0.976372,0.980609
+"production (a4i, cuda-exl3 448f1d6), gmu 0.75",reference-no-clamp|engine-run1,text:turkish-prose:all,1456,0.0210292,0.00205713,0.0345019,0.0534208,0.161904,8.94797,0.971841
+"production (a4i, cuda-exl3 448f1d6), gmu 0.75",reference-no-clamp|engine-run1,text:turkish-prose:assistant,1362,0.011396,0.00190789,0.0316386,0.0500018,0.101914,0.941599,0.975771
+"production (a4i, cuda-exl3 448f1d6), gmu 0.75",reference-no-clamp|engine-run1,text:english-prose:all,1148,0.00724872,0.00209881,0.0143872,0.0237284,0.0699806,0.425067,0.972125
+"production (a4i, cuda-exl3 448f1d6), gmu 0.75",reference-no-clamp|engine-run1,text:english-prose:assistant,1091,0.00603142,0.00199894,0.0137421,0.0219296,0.0469031,0.425067,0.977085
+"production (a4i, cuda-exl3 448f1d6), gmu 0.75",reference-no-clamp|engine-run1,text:code:all,1770,0.00925812,3.59315e-05,0.00962801,0.020562,0.136903,1.63719,0.983616
+"production (a4i, cuda-exl3 448f1d6), gmu 0.75",reference-no-clamp|engine-run1,text:code:assistant,1660,0.00298103,2.91117e-05,0.0070374,0.0147059,0.0524254,0.262057,0.990964
+"production (a4i, cuda-exl3 448f1d6), gmu 0.75",reference-no-clamp|engine-run1,text:tool-call:all,1686,0.43623,0.00577615,0.598212,2.40701,9.69374,21.1712,0.8707
+"production (a4i, cuda-exl3 448f1d6), gmu 0.75",reference-no-clamp|engine-run1,text:tool-call:assistant,650,0.00669069,5.33327e-05,0.0153728,0.0339419,0.0993908,0.423354,0.98
+"production (a4i, cuda-exl3 448f1d6), gmu 0.75",reference-no-clamp|engine-run1,text:reasoning:all,1475,0.0353623,0.00066195,0.0576285,0.10905,0.506034,5.5479,0.966102
+"production (a4i, cuda-exl3 448f1d6), gmu 0.75",reference-no-clamp|engine-run1,text:reasoning:assistant,1186,0.0123109,0.000233002,0.0359584,0.0659185,0.163285,0.365053,0.98398
+"production (a4i, cuda-exl3 448f1d6), gmu 0.75",reference-no-clamp|engine-run1,text:long-context-13k:all,13531,0.417438,0.048041,0.716573,1.90145,8.3516,20.5558,0.809105
+"production (a4i, cuda-exl3 448f1d6), gmu 0.75",reference-no-clamp|engine-run1,text:long-context-13k:assistant,652,0.0144969,0.00185921,0.0310499,0.0546124,0.17103,0.976372,0.964724
+"production (a4i, cuda-exl3 448f1d6), gmu 0.75",bias-fix-build-run1|production-build-run1,all,21066,0.286834,0.0191955,0.43889,1.19223,5.92067,19.9367,0.863856
+"production (a4i, cuda-exl3 448f1d6), gmu 0.75",bias-fix-build-run1|production-build-run1,dense<2048,9583,0.141438,0.00264597,0.164975,0.459099,3.46791,17.0698,0.922467
+"production (a4i, cuda-exl3 448f1d6), gmu 0.75",bias-fix-build-run1|production-build-run1,sparse>=2048,11483,0.408173,0.0497034,0.731738,1.95725,7.55051,19.9367,0.814944
+"production (a4i, cuda-exl3 448f1d6), gmu 0.75",bias-fix-build-run1|production-build-run1,assistant-tokens,6601,0.00848519,0.000484705,0.0205395,0.0408953,0.109466,0.835952,0.980155
+"production (a4i, cuda-exl3 448f1d6), gmu 0.75",bias-fix-build-run1|production-build-run1,text:turkish-prose:all,1456,0.0176811,0.00186066,0.0328849,0.0584192,0.177009,2.64982,0.968407
+"production (a4i, cuda-exl3 448f1d6), gmu 0.75",bias-fix-build-run1|production-build-run1,text:turkish-prose:assistant,1362,0.0105452,0.00174276,0.0288302,0.0501037,0.108708,0.249329,0.974302
+"production (a4i, cuda-exl3 448f1d6), gmu 0.75",bias-fix-build-run1|production-build-run1,text:english-prose:all,1148,0.00714612,0.0025097,0.0158113,0.0243718,0.0520986,0.43291,0.974739
+"production (a4i, cuda-exl3 448f1d6), gmu 0.75",bias-fix-build-run1|production-build-run1,text:english-prose:assistant,1091,0.00567632,0.00242288,0.0149228,0.0221228,0.0445105,0.109876,0.977085
+"production (a4i, cuda-exl3 448f1d6), gmu 0.75",bias-fix-build-run1|production-build-run1,text:code:all,1770,0.0176641,3.27948e-05,0.010156,0.0238537,0.310033,11.1664,0.985311
+"production (a4i, cuda-exl3 448f1d6), gmu 0.75",bias-fix-build-run1|production-build-run1,text:code:assistant,1660,0.0035606,2.68605e-05,0.00735869,0.0170949,0.0690713,0.311297,0.993373
+"production (a4i, cuda-exl3 448f1d6), gmu 0.75",bias-fix-build-run1|production-build-run1,text:tool-call:all,1686,0.338911,0.0060481,0.554799,2.03754,6.33211,17.0698,0.881376
+"production (a4i, cuda-exl3 448f1d6), gmu 0.75",bias-fix-build-run1|production-build-run1,text:tool-call:assistant,650,0.00712474,4.56038e-05,0.0170836,0.0346531,0.106715,0.443658,0.983077
+"production (a4i, cuda-exl3 448f1d6), gmu 0.75",bias-fix-build-run1|production-build-run1,text:reasoning:all,1475,0.0330616,0.000686898,0.060851,0.11099,0.488554,5.5287,0.965424
+"production (a4i, cuda-exl3 448f1d6), gmu 0.75",bias-fix-build-run1|production-build-run1,text:reasoning:assistant,1186,0.0126146,0.000251185,0.0392428,0.0696908,0.149667,0.517026,0.980607
+"production (a4i, cuda-exl3 448f1d6), gmu 0.75",bias-fix-build-run1|production-build-run1,text:long-context-13k:all,13531,0.395911,0.0496758,0.702065,1.82969,7.18127,19.9367,0.814057
+"production (a4i, cuda-exl3 448f1d6), gmu 0.75",bias-fix-build-run1|production-build-run1,text:long-context-13k:assistant,652,0.0152649,0.00213704,0.0329548,0.0631444,0.174236,0.835952,0.960123
+"production (a4i, cuda-exl3 448f1d6), gmu 0.85 as booted for the memory-fraction trial",reference|engine-run1,all,21066,0.331977,0.0191228,0.462535,1.30478,7.97331,23.5416,0.860534
+"production (a4i, cuda-exl3 448f1d6), gmu 0.85 as booted for the memory-fraction trial",reference|engine-run1,dense<2048,9583,0.181616,0.00268358,0.165272,0.487302,4.56411,18.407,0.921945
+"production (a4i, cuda-exl3 448f1d6), gmu 0.85 as booted for the memory-fraction trial",reference|engine-run1,sparse>=2048,11483,0.457459,0.0507957,0.767367,1.9599,9.22268,23.5416,0.809283
+"production (a4i, cuda-exl3 448f1d6), gmu 0.85 as booted for the memory-fraction trial",reference|engine-run1,assistant-tokens,6601,0.00805501,0.000466086,0.020441,0.0397206,0.107938,0.793926,0.979094
+"production (a4i, cuda-exl3 448f1d6), gmu 0.85 as booted for the memory-fraction trial",reference|engine-run1,text:turkish-prose:all,1456,0.0262076,0.00192391,0.0365539,0.0597814,0.207122,12.1052,0.965659
+"production (a4i, cuda-exl3 448f1d6), gmu 0.85 as booted for the memory-fraction trial",reference|engine-run1,text:turkish-prose:assistant,1362,0.0117982,0.00180048,0.0312445,0.0508604,0.118749,0.793926,0.969163
+"production (a4i, cuda-exl3 448f1d6), gmu 0.85 as booted for the memory-fraction trial",reference|engine-run1,text:english-prose:all,1148,0.0067476,0.0022587,0.0162819,0.0265896,0.0704422,0.249884,0.968641
+"production (a4i, cuda-exl3 448f1d6), gmu 0.85 as booted for the memory-fraction trial",reference|engine-run1,text:english-prose:assistant,1091,0.00613457,0.00215739,0.0153103,0.0247961,0.0607553,0.147375,0.969753
+"production (a4i, cuda-exl3 448f1d6), gmu 0.85 as booted for the memory-fraction trial",reference|engine-run1,text:code:all,1770,0.0175779,4.01693e-05,0.00927495,0.0229011,0.126645,10.8903,0.985876
+"production (a4i, cuda-exl3 448f1d6), gmu 0.85 as booted for the memory-fraction trial",reference|engine-run1,text:code:assistant,1660,0.00283838,3.19273e-05,0.00642231,0.0153423,0.0474697,0.126638,0.993976
+"production (a4i, cuda-exl3 448f1d6), gmu 0.85 as booted for the memory-fraction trial",reference|engine-run1,text:tool-call:all,1686,0.448473,0.00579705,0.552917,2.42595,9.96402,18.407,0.875445
+"production (a4i, cuda-exl3 448f1d6), gmu 0.85 as booted for the memory-fraction trial",reference|engine-run1,text:tool-call:assistant,650,0.00659868,4.58816e-05,0.0140969,0.0319516,0.109858,0.606289,0.989231
+"production (a4i, cuda-exl3 448f1d6), gmu 0.85 as booted for the memory-fraction trial",reference|engine-run1,text:reasoning:all,1475,0.0417789,0.000596547,0.0554748,0.113415,0.665698,14.3479,0.964068
+"production (a4i, cuda-exl3 448f1d6), gmu 0.85 as booted for the memory-fraction trial",reference|engine-run1,text:reasoning:assistant,1186,0.0117025,0.000244496,0.0321356,0.0728425,0.145369,0.575427,0.977234
+"production (a4i, cuda-exl3 448f1d6), gmu 0.85 as booted for the memory-fraction trial",reference|engine-run1,text:long-context-13k:all,13531,0.450718,0.0502269,0.753924,1.94438,9.08575,23.5416,0.810509
+"production (a4i, cuda-exl3 448f1d6), gmu 0.85 as booted for the memory-fraction trial",reference|engine-run1,text:long-context-13k:assistant,652,0.0115478,0.00211139,0.0299769,0.0511635,0.153075,0.265988,0.970859
+"production (a4i, cuda-exl3 448f1d6), gmu 0.85 as booted for the memory-fraction trial",reference-no-clamp|engine-run1,all,21066,0.311759,0.0189771,0.448492,1.27196,6.89955,23.8233,0.86153
+"production (a4i, cuda-exl3 448f1d6), gmu 0.85 as booted for the memory-fraction trial",reference-no-clamp|engine-run1,dense<2048,9583,0.179229,0.00277451,0.161545,0.489931,4.80212,17.3123,0.920589
+"production (a4i, cuda-exl3 448f1d6), gmu 0.85 as booted for the memory-fraction trial",reference-no-clamp|engine-run1,sparse>=2048,11483,0.42236,0.0483361,0.73579,1.9436,8.23624,23.8233,0.812244
+"production (a4i, cuda-exl3 448f1d6), gmu 0.85 as booted for the memory-fraction trial",reference-no-clamp|engine-run1,assistant-tokens,6601,0.00815651,0.000417496,0.0207659,0.0398224,0.105497,0.599338,0.978185
+"production (a4i, cuda-exl3 448f1d6), gmu 0.85 as booted for the memory-fraction trial",reference-no-clamp|engine-run1,text:turkish-prose:all,1456,0.0211559,0.00197167,0.0342477,0.0554256,0.232038,8.49419,0.965659
+"production (a4i, cuda-exl3 448f1d6), gmu 0.85 as booted for the memory-fraction trial",reference-no-clamp|engine-run1,text:turkish-prose:assistant,1362,0.0115942,0.00169495,0.0298789,0.0491885,0.129831,0.599338,0.968429
+"production (a4i, cuda-exl3 448f1d6), gmu 0.85 as booted for the memory-fraction trial",reference-no-clamp|engine-run1,text:english-prose:all,1148,0.00623459,0.00214748,0.0138578,0.023012,0.0554998,0.269708,0.968641
+"production (a4i, cuda-exl3 448f1d6), gmu 0.85 as booted for the memory-fraction trial",reference-no-clamp|engine-run1,text:english-prose:assistant,1091,0.00559588,0.00209586,0.0134986,0.0206806,0.0461854,0.225976,0.970669
+"production (a4i, cuda-exl3 448f1d6), gmu 0.85 as booted for the memory-fraction trial",reference-no-clamp|engine-run1,text:code:all,1770,0.0130452,3.59455e-05,0.00968852,0.0220382,0.146896,3.58718,0.983616
+"production (a4i, cuda-exl3 448f1d6), gmu 0.85 as booted for the memory-fraction trial",reference-no-clamp|engine-run1,text:code:assistant,1660,0.002837,2.84367e-05,0.0060014,0.0146132,0.0458831,0.172041,0.992169
+"production (a4i, cuda-exl3 448f1d6), gmu 0.85 as booted for the memory-fraction trial",reference-no-clamp|engine-run1,text:tool-call:all,1686,0.475289,0.00558075,0.543269,2.61209,11.0637,16.7941,0.871886
+"production (a4i, cuda-exl3 448f1d6), gmu 0.85 as booted for the memory-fraction trial",reference-no-clamp|engine-run1,text:tool-call:assistant,650,0.00785045,4.95479e-05,0.0134662,0.0365735,0.134002,0.485328,0.989231
+"production (a4i, cuda-exl3 448f1d6), gmu 0.85 as booted for the memory-fraction trial",reference-no-clamp|engine-run1,text:reasoning:all,1475,0.0395126,0.000591967,0.0559338,0.101393,0.593063,5.23129,0.961356
+"production (a4i, cuda-exl3 448f1d6), gmu 0.85 as booted for the memory-fraction trial",reference-no-clamp|engine-run1,text:reasoning:assistant,1186,0.0117805,0.000213467,0.0357635,0.0641057,0.140353,0.373101,0.977234
+"production (a4i, cuda-exl3 448f1d6), gmu 0.85 as booted for the memory-fraction trial",reference-no-clamp|engine-run1,text:long-context-13k:all,13531,0.417326,0.0484321,0.728534,1.91833,7.96989,23.8233,0.813096
+"production (a4i, cuda-exl3 448f1d6), gmu 0.85 as booted for the memory-fraction trial",reference-no-clamp|engine-run1,text:long-context-13k:assistant,652,0.0125166,0.00187838,0.0321319,0.0538723,0.135461,0.506231,0.966258
+"production (a4i, cuda-exl3 448f1d6), gmu 0.85 as booted for the memory-fraction trial",production-build-0.75-run1|production-build-0.85-run1,all,21066,0.281242,0.0194452,0.42808,1.12383,6.11257,22.5855,0.865518
+"production (a4i, cuda-exl3 448f1d6), gmu 0.85 as booted for the memory-fraction trial",production-build-0.75-run1|production-build-0.85-run1,dense<2048,9583,0.148026,0.00291071,0.159789,0.4324,3.63499,16.7182,0.923093
+"production (a4i, cuda-exl3 448f1d6), gmu 0.85 as booted for the memory-fraction trial",production-build-0.75-run1|production-build-0.85-run1,sparse>=2048,11483,0.392415,0.0488085,0.663054,1.73452,7.7219,22.5855,0.817469
+"production (a4i, cuda-exl3 448f1d6), gmu 0.85 as booted for the memory-fraction trial",production-build-0.75-run1|production-build-0.85-run1,assistant-tokens,6601,0.00873396,0.000487442,0.022222,0.0402334,0.119397,0.692676,0.976822
+"production (a4i, cuda-exl3 448f1d6), gmu 0.85 as booted for the memory-fraction trial",production-build-0.75-run1|production-build-0.85-run1,text:turkish-prose:all,1456,0.0216286,0.00222295,0.0369632,0.0624562,0.207319,7.55818,0.966346
+"production (a4i, cuda-exl3 448f1d6), gmu 0.85 as booted for the memory-fraction trial",production-build-0.75-run1|production-build-0.85-run1,text:turkish-prose:assistant,1362,0.0125854,0.00204447,0.0351318,0.0540672,0.129442,0.640366,0.967695
+"production (a4i, cuda-exl3 448f1d6), gmu 0.85 as booted for the memory-fraction trial",production-build-0.75-run1|production-build-0.85-run1,text:english-prose:all,1148,0.00776825,0.00244248,0.0170684,0.0278504,0.0783495,0.554024,0.969512
+"production (a4i, cuda-exl3 448f1d6), gmu 0.85 as booted for the memory-fraction trial",production-build-0.75-run1|production-build-0.85-run1,text:english-prose:assistant,1091,0.00659965,0.0023491,0.01676,0.0254913,0.0631405,0.325769,0.972502
+"production (a4i, cuda-exl3 448f1d6), gmu 0.85 as booted for the memory-fraction trial",production-build-0.75-run1|production-build-0.85-run1,text:code:all,1770,0.012051,3.51441e-05,0.00987739,0.0273457,0.182967,4.0581,0.982486
+"production (a4i, cuda-exl3 448f1d6), gmu 0.85 as booted for the memory-fraction trial",production-build-0.75-run1|production-build-0.85-run1,text:code:assistant,1660,0.00322753,2.81625e-05,0.00711673,0.0159931,0.0522099,0.304861,0.990964
+"production (a4i, cuda-exl3 448f1d6), gmu 0.85 as booted for the memory-fraction trial",production-build-0.75-run1|production-build-0.85-run1,text:tool-call:all,1686,0.365534,0.00651891,0.457969,1.67547,8.36135,16.0426,0.88019
+"production (a4i, cuda-exl3 448f1d6), gmu 0.85 as booted for the memory-fraction trial",production-build-0.75-run1|production-build-0.85-run1,text:tool-call:assistant,650,0.00782965,4.35693e-05,0.0169624,0.0370071,0.12565,0.554217,0.983077
+"production (a4i, cuda-exl3 448f1d6), gmu 0.85 as booted for the memory-fraction trial",production-build-0.75-run1|production-build-0.85-run1,text:reasoning:all,1475,0.0351958,0.00072363,0.0561285,0.121839,0.580004,4.74535,0.960678
+"production (a4i, cuda-exl3 448f1d6), gmu 0.85 as booted for the memory-fraction trial",production-build-0.75-run1|production-build-0.85-run1,text:reasoning:assistant,1186,0.0118316,0.000231808,0.0320685,0.0608149,0.143324,0.641201,0.977234
+"production (a4i, cuda-exl3 448f1d6), gmu 0.85 as booted for the memory-fraction trial",production-build-0.75-run1|production-build-0.85-run1,text:long-context-13k:all,13531,0.38391,0.0485173,0.656205,1.71924,7.56925,22.5855,0.818343
+"production (a4i, cuda-exl3 448f1d6), gmu 0.85 as booted for the memory-fraction trial",production-build-0.75-run1|production-build-0.85-run1,text:long-context-13k:assistant,652,0.0135462,0.00196079,0.0336067,0.0507567,0.13368,0.692676,0.960123

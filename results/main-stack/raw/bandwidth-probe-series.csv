@@ -1,0 +1,103 @@
+sample,clock_time_8_oct,state,engine_sessions_since_reboot,node,gemv_continuous_GB_s,copy_64MB_GB_s,free_32MB_blocks_order13
+1,00:51,"degraded, before reboot",~10,head,218.9,219.2,368
+1,00:51,"degraded, before reboot",~10,worker-1,219.3,219.2,345
+1,00:51,"degraded, before reboot",~10,worker-2,219.2,219.1,237
+2,00:53,"after drop_caches + compact_memory, no reboot",~10,head,219.1,220.6,505
+2,00:53,"after drop_caches + compact_memory, no reboot",~10,worker-1,219.2,219.5,543
+2,00:53,"after drop_caches + compact_memory, no reboot",~10,worker-2,219.1,218.4,410
+3,00:57,fresh reboot,0,head,234.3,240.4,3707
+3,00:57,fresh reboot,0,worker-1,244.7,244.0,3711
+3,00:57,fresh reboot,0,worker-2,244.1,243.3,3712
+4,01:01,fresh reboot,0,head,236.1,241.3,3654
+4,01:01,fresh reboot,0,worker-1,244.9,244.0,3665
+4,01:01,fresh reboot,0,worker-2,244.6,243.8,3664
+5,02:38,"after engine sessions, no reboot",6-7,head,221.7,225.9,1030
+5,02:38,"after engine sessions, no reboot",6-7,worker-1,220.4,224.9,722
+5,02:38,"after engine sessions, no reboot",6-7,worker-2,220.0,223.4,657
+6,02:57,fresh reboot,0,head,235.0,241.6,3722
+6,02:57,fresh reboot,0,worker-1,244.4,244.1,3712
+6,02:57,fresh reboot,0,worker-2,244.7,244.3,3712
+7,03:23,fresh reboot,0,head,234.5,241.7,3723
+7,03:23,fresh reboot,0,worker-1,244.8,242.5,3709
+7,03:23,fresh reboot,0,worker-2,244.7,243.0,3711
+8,03:48,fresh reboot,0,head,233.7,241.8,3708
+8,03:48,fresh reboot,0,worker-1,244.9,243.3,3711
+8,03:48,fresh reboot,0,worker-2,244.2,243.1,3712
+9,04:13,fresh reboot,0,head,234.4,243.0,3723
+9,04:13,fresh reboot,0,worker-1,244.4,243.8,3711
+9,04:13,fresh reboot,0,worker-2,244.5,242.9,3712
+10,04:42,fresh reboot,0,head,235.2,242.9,3723
+10,04:42,fresh reboot,0,worker-1,244.2,244.1,3712
+10,04:42,fresh reboot,0,worker-2,244.7,243.5,3712
+11,04:58,"after one engine session, no reboot",1,head,226.4,236.0,2202
+11,04:58,"after one engine session, no reboot",1,worker-1,228.1,235.1,2070
+11,04:58,"after one engine session, no reboot",1,worker-2,229.9,233.9,2226
+12,05:10,fresh reboot,0,head,234.3,240.6,3709
+12,05:10,fresh reboot,0,worker-1,244.6,244.2,3710
+12,05:10,fresh reboot,0,worker-2,245.4,243.5,3712
+13,05:35,fresh reboot,0,head,234.4,240.7,3723
+13,05:35,fresh reboot,0,worker-1,244.7,243.8,3709
+13,05:35,fresh reboot,0,worker-2,244.1,243.2,3708
+14,05:59,"after one engine session, no reboot",1,head,225.7,237.4,2208
+14,05:59,"after one engine session, no reboot",1,worker-1,228.9,238.2,2089
+14,05:59,"after one engine session, no reboot",1,worker-2,228.5,236.1,2209
+15,06:36,"after reboot + image build, test and distribution containers, no engine",0,head,236.5,241.6,3693
+15,06:36,"after reboot + image build, test and distribution containers, no engine",0,worker-1,245.1,244.1,3693
+15,06:36,"after reboot + image build, test and distribution containers, no engine",0,worker-2,244.2,243.3,3274
+16,06:39,fresh reboot,0,head,234.8,240.7,3709
+16,06:39,fresh reboot,0,worker-1,244.7,244.0,3710
+16,06:39,fresh reboot,0,worker-2,244.9,244.1,3712
+17,06:50,fresh reboot,0,head,234.9,239.3,3721
+17,06:50,fresh reboot,0,worker-1,244.7,243.7,3710
+17,06:50,fresh reboot,0,worker-2,244.4,244.0,3711
+18,07:09,fresh reboot,0,head,234.8,242.4,3721
+18,07:09,fresh reboot,0,worker-1,244.3,242.7,3711
+18,07:09,fresh reboot,0,worker-2,244.3,243.3,3711
+19,07:25,"after one engine session, no reboot",1,head,226.1,232.6,2175
+19,07:25,"after one engine session, no reboot",1,worker-1,227.6,236.2,2183
+19,07:25,"after one engine session, no reboot",1,worker-2,228.0,234.0,2251
+20,07:44,fresh reboot,0,head,233.9,241.5,3707
+20,07:44,fresh reboot,0,worker-1,245.5,242.7,3710
+20,07:44,fresh reboot,0,worker-2,245.5,243.8,3712
+21,08:55,fresh reboot,0,head,235.1,242.0,3720
+21,08:55,fresh reboot,0,worker-1,244.4,243.4,3713
+21,08:55,fresh reboot,0,worker-2,244.0,242.7,3712
+22,10:01,fresh reboot,0,head,234.4,242.0,3722
+22,10:01,fresh reboot,0,worker-1,244.4,242.7,3714
+22,10:01,fresh reboot,0,worker-2,244.1,243.1,3712
+23,11:07,fresh reboot,0,head,234.5,242.0,3719
+23,11:07,fresh reboot,0,worker-1,244.2,242.2,3712
+23,11:07,fresh reboot,0,worker-2,243.8,242.6,3710
+24,12:20,"after one engine session, no reboot",1,head,224.5,236.8,2231
+24,12:20,"after one engine session, no reboot",1,worker-1,227.1,239.4,2173
+24,12:20,"after one engine session, no reboot",1,worker-2,227.5,234.2,2237
+25,12:29,fresh reboot,0,head,234.6,241.6,3708
+25,12:29,fresh reboot,0,worker-1,244.3,243.9,3712
+25,12:29,fresh reboot,0,worker-2,244.2,243.9,3712
+26,12:43,fresh reboot,0,head,233.4,241.9,3722
+26,12:43,fresh reboot,0,worker-1,244.0,243.4,3714
+26,12:43,fresh reboot,0,worker-2,244.2,243.0,3712
+27,12:58,fresh reboot,0,head,234.0,242.2,3708
+27,12:58,fresh reboot,0,worker-1,244.3,243.2,3712
+27,12:58,fresh reboot,0,worker-2,244.1,243.3,3711
+28,13:12,fresh reboot,0,head,234.2,240.5,3722
+28,13:12,fresh reboot,0,worker-1,244.2,242.5,3713
+28,13:12,fresh reboot,0,worker-2,243.9,243.3,3713
+29,13:26,fresh reboot,0,head,234.5,240.3,3722
+29,13:26,fresh reboot,0,worker-1,244.3,243.9,3708
+29,13:26,fresh reboot,0,worker-2,243.7,243.0,3709
+30,13:41,fresh reboot,0,head,234.3,241.2,3722
+30,13:41,fresh reboot,0,worker-1,244.0,243.4,3711
+30,13:41,fresh reboot,0,worker-2,243.6,243.2,3711
+31,13:53,"after one engine session, no reboot",1,head,226.1,235.1,2246
+31,13:53,"after one engine session, no reboot",1,worker-1,227.2,232.9,2124
+31,13:53,"after one engine session, no reboot",1,worker-2,230.5,237.3,2243
+32,14:12,fresh reboot,0,head,234.1,241.3,3708
+32,14:12,fresh reboot,0,worker-1,244.4,244.0,3713
+32,14:12,fresh reboot,0,worker-2,244.2,242.9,3713
+33,14:38,fresh reboot,0,head,235.1,241.3,3706
+33,14:38,fresh reboot,0,worker-1,244.0,244.0,3709
+33,14:38,fresh reboot,0,worker-2,245.0,243.9,3711
+34,14:56,"after one engine session, no reboot",1,head,226.8,235.0,2472
+34,14:56,"after one engine session, no reboot",1,worker-1,226.6,242.1,2329
+34,14:56,"after one engine session, no reboot",1,worker-2,227.9,235.9,2396

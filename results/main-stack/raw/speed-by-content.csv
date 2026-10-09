@@ -1,0 +1,41 @@
+arm,content_type,concurrency,per_stream_tok_s_median,aggregate_tok_s,ttft_median_s,ttft_worst_s,first_visible_median_s,draft_acceptance,tokens_per_step,ms_per_step,tokens_generated
+"draft k=7, eager (production candidate shape)",english-prose,1,35.09,34.33,0.176,0.196,0.253,0.2351,2.646,75.24,1024
+"draft k=7, eager (production candidate shape)",english-prose,2,24.49,44.19,0.302,0.374,0.407,0.2205,2.543,106.1,1024
+"draft k=7, eager (production candidate shape)",english-prose,4,17.11,63.86,0.529,0.529,0.673,0.2356,2.649,152.2,1024
+"draft k=7, eager (production candidate shape)",english-prose,5,16.05,74.05,0.617,0.617,0.778,0.2451,2.715,167.1,1280
+"draft k=7, eager (production candidate shape)",code,1,59.01,57.68,0.262,0.292,0.339,0.5453,4.817,78.69,1024
+"draft k=7, eager (production candidate shape)",code,2,41.7,68.47,0.32,0.429,0.424,0.4744,4.321,108.3,1024
+"draft k=7, eager (production candidate shape)",code,4,29.58,93.63,0.555,0.556,0.698,0.5117,4.582,152.2,1024
+"draft k=7, eager (production candidate shape)",code,5,28.92,103.2,0.631,0.631,0.792,0.5217,4.652,161.2,1280
+"draft k=7, eager (production candidate shape)",tool-call-json,1,48.19,36.75,1.4,2.51,3.7,0.3767,3.554,77.12,1024
+"draft k=7, eager (production candidate shape)",tool-call-json,2,34.67,50.17,2.11,4.79,5.84,0.4097,3.776,115.2,1024
+"draft k=7, eager (production candidate shape)",tool-call-json,4,20.26,60.7,3.52,5.32,9.13,0.4047,3.732,176.4,1024
+"draft k=7, eager (production candidate shape)",tool-call-json,5,20.28,66.17,4.63,7.45,16.5,0.4301,3.909,209.1,1280
+"draft k=7, eager (production candidate shape)",math,1,70.35,66.4,0.262,0.3,0.505,0.6674,5.672,78.47,1024
+"draft k=7, eager (production candidate shape)",math,2,53.13,97.32,0.319,0.426,0.678,0.7218,6.053,113.7,1024
+"draft k=7, eager (production candidate shape)",math,4,34.43,123.2,0.608,0.609,1.16,0.6607,5.625,159.8,1024
+"draft k=7, eager (production candidate shape)",math,5,30.97,142.7,0.628,0.628,1.44,0.6292,5.404,166.6,1280
+"draft k=7, eager (production candidate shape)",turkish-short,1,22.53,21.62,0.338,0.361,0.414,0.09886,1.692,74,512
+"draft k=7, eager (production candidate shape)",turkish-short,2,15.65,30.12,0.47,0.617,0.606,0.09872,1.691,103.6,512
+"draft k=7, eager (production candidate shape)",turkish-short,4,12.37,44.19,0.844,0.845,0.981,0.1075,1.753,140.9,512
+"draft k=7, eager (production candidate shape)",turkish-short,5,10.84,50.43,0.462,0.976,0.584,0.1007,1.705,155.6,640
+"no draft, CUDA graph",english-prose,1,32.47,31.89,0.174,0.193,0.208,,,30.81,1024
+"no draft, CUDA graph",english-prose,2,25.07,48.93,0.241,0.339,0.275,,,40.02,1024
+"no draft, CUDA graph",english-prose,4,18.31,71.51,0.354,0.467,0.395,,,54.6,1024
+"no draft, CUDA graph",english-prose,5,16.5,80.09,0.522,0.523,0.575,,,60.89,1280
+"no draft, CUDA graph",code,1,32.64,31.98,0.188,0.22,0.22,,,30.65,1024
+"no draft, CUDA graph",code,2,24.97,48.68,0.212,0.447,0.25,,,40.12,1024
+"no draft, CUDA graph",code,4,18.36,70.97,0.538,0.539,0.584,,,54.72,1024
+"no draft, CUDA graph",code,5,16.45,80.33,0.396,0.636,0.637,,,60.6,1280
+"no draft, CUDA graph",tool-call-json,1,32.44,30.95,0.423,0.639,4.34,,,30.78,1024
+"no draft, CUDA graph",tool-call-json,2,24.71,46.15,0.529,1.3,5.98,,,40.89,1024
+"no draft, CUDA graph",tool-call-json,4,18.12,66.5,1.3,1.48,8.42,,,55.98,1024
+"no draft, CUDA graph",tool-call-json,5,15.81,73.36,1.28,1.94,17.4,,,63.03,1280
+"no draft, CUDA graph",math,1,32.52,31.82,0.201,0.244,0.506,,,30.75,1024
+"no draft, CUDA graph",math,2,24.89,48.34,0.271,0.434,0.775,,,40.34,1024
+"no draft, CUDA graph",math,4,18.18,71.2,0.296,0.569,1.03,,,54.8,1024
+"no draft, CUDA graph",math,5,16.54,80.02,0.575,0.576,1.59,,,60.85,1280
+"no draft, CUDA graph",turkish-short,1,32.66,30.57,0.293,0.306,0.33,,,30.64,512
+"no draft, CUDA graph",turkish-short,2,24.85,45.81,0.459,0.628,0.608,,,40.26,512
+"no draft, CUDA graph",turkish-short,4,19.56,70.22,0.798,0.799,0.846,,,51.86,512
+"no draft, CUDA graph",turkish-short,5,17.45,78.82,0.839,0.839,0.889,,,58,640

@@ -1,0 +1,3 @@
+gpu_memory_utilization,kv_pool_tokens,boot_s,head_min_MemAvailable_MiB_5users_text,head_median_MemAvailable_MiB_5users_text,head_min_MiB_8_large_images_plus_5users,head_min_MiB_16_large_images_plus_5users,head_median_MiB_16_large_images_plus_5users,outcome
+0.85,6354223,169,4759,4846,1544,882,,watchdog stop at 8 s into the 16-image request (floor 1 GiB)
+0.84,6188010,186,5975,6009,3064,1621,1695,memory gates passed; 16/16 images correct in 84.7 s

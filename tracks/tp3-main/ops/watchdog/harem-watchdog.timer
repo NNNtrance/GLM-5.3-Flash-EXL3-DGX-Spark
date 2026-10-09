@@ -1,0 +1,11 @@
+[Unit]
+Description=HAREM engine watchdog timer (every minute)
+
+[Timer]
+OnBootSec=10min
+OnUnitActiveSec=60s
+AccuracySec=10s
+Unit=harem-watchdog.service
+
+[Install]
+WantedBy=timers.target

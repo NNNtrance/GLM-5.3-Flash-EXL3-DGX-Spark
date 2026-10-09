@@ -1,0 +1,8 @@
+arm,num_speculative_tokens_per_batch_size,kv_pool_tokens_gmu_0.75,boot_s,one_user_ms_per_step,four_users_ms_per_step,teacher_forced_agreement,tokens_checked,large_margin_divergences
+control k=7 (first chain),"[[1,8,7]] (no knob)",4670299,185,74.9,160.2,4316,4352,13
+k=3,"[[1,8,3]]",4651226,186,59.8,116.1,4155,4188,14
+k=5,"[[1,8,5]]",4656675,185,67.3,140.6,4314,4352,11
+k=1,"[[1,8,1]]",4645776,185,55.7,84.4,4292,4352,26
+drift control k=7,"[[1,8,7]] (no knob)",4664850,170,75.6,160.3,4310,4352,21
+control k=7 (confirmatory chain),"[[1,8,7]] (no knob)",4656675,169,75.6,160.2,4318,4352,17
+per-batch-size schedule (confirmatory),"[[1,1,7],[2,8,3]]",4659400,169,74.9,114.5,4309,4352,24

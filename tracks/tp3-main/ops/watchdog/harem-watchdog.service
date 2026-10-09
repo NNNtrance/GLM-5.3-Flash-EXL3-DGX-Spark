@@ -1,0 +1,10 @@
+[Unit]
+Description=HAREM engine watchdog (health + progress probe; triple reboot on a dead or hung engine; rate limited)
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=@USER@
+ExecStart=/bin/bash @HOME@/exl3-main/watchdog/watchdog.sh
+# probe <= 60 s + health/metrics < 20 s; the timer fires every minute, flock prevents overlap
+TimeoutStartSec=180

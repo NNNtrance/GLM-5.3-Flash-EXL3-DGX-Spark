@@ -1,0 +1,9 @@
+arm,setting,mode,turn1_ttft_median_s,turn2plus_ttft_median_s,turn2plus_ttft_mean_s,turn2plus_ttft_worst_s,turn2plus_prompt_tokens,turn2plus_cached_tokens,turn2plus_reread_tokens,pooled_draft_acceptance,decode_tok_s_median,n_requests,kv_pool_tokens_this_boot
+a1,control (drop on),serial,2.923,2.34,2.489,4.722,1218189,1106944,111245,0.404,46.38,35,4673024
+a1,control (drop on),5-session wave,2.667,7.245,6.981,11.81,1184295,1087744,96551,,17.46,35,4673024
+b1,NODROP,serial,3.007,1.235,1.229,1.955,1218189,1175040,43149,0.426,48.07,35,4645776
+b1,NODROP,5-session wave,2.591,3.826,3.836,5.747,1184295,1144320,39975,,23.16,35,4645776
+b2,NODROP,serial,3.044,1.143,1.203,1.959,1218189,1175040,43149,0.406,47.61,35,4664850
+b2,NODROP,5-session wave,2.597,3.649,3.77,5.886,1184295,1144320,39975,,22.41,35,4664850
+a2,control (drop on),serial,2.972,2.35,2.502,4.743,1218189,1106944,111245,0.422,47.35,35,4662125
+a2,control (drop on),5-session wave,2.695,7.226,6.995,11.84,1184295,1087744,96551,,19.11,35,4662125

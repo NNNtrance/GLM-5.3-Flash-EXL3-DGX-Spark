@@ -1,0 +1,25 @@
+# The autostart unit for the tp3-main stack, for a node that does NOT already carry the
+# old tracks/tp3 unit. (If it does, use the drop-in next to this file instead of replacing
+# the unit: harem-exl3.service.d/tp3-main.conf.)
+# Replace @USER@ and @HOME@ (sed, on the node). Install and enable: README, "Autostart".
+[Unit]
+Description=GLM-5.3-Flash EXL3 engine (tp3-main: vLLM 21d93d0d8 + cuda-exl3 448f1d6, TP=3 + EP, vision)
+After=docker.service network-online.target
+Wants=network-online.target
+Requires=docker.service
+Conflicts=harem-motor.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+User=@USER@
+Environment=ENV_FILE=@HOME@/exl3-main/.env.tp3-main
+Environment=HOME=@HOME@
+WorkingDirectory=@HOME@/exl3-main
+ExecStartPre=/bin/bash @HOME@/exl3-main/bin/preflight-tp3-main.sh
+ExecStart=/bin/bash @HOME@/exl3-main/bin/start-tp3-main.sh
+ExecStop=/bin/bash -c 'docker logs exl3-tp3 > @HOME@/exl3-main/log/stop-$$(date +%%Y%%m%%d-%%H%%M%%S).log 2>&1; docker stop -t 90 exl3-tp3'
+TimeoutStartSec=1500
+
+[Install]
+WantedBy=multi-user.target

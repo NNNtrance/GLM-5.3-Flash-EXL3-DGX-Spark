@@ -11,6 +11,53 @@ rounds, which is what the persisted MLA tuner cache bought — see
 
 ---
 
+## 9 October 2026 — the three-node track moves to vLLM `main`, with the router bias loaded
+
+Production since 8 October runs a rebuilt engine, documented in the new track
+[`tracks/tp3-main/`](tracks/tp3-main/README.md), [docs/20](docs/20-main-stack.md) and
+[`results/main-stack/`](results/main-stack/README.md). Its components:
+- upstream vLLM `main` @ `21d93d0d8`;
+- our `cuda-exl3` fork [`NNNtrance/cuda-exl3` `tp3-vllm-main`](https://github.com/NNNtrance/cuda-exl3/tree/tp3-vllm-main)
+  @ `448f1d6`: the router bias loaded behind a boot gate that refuses to start without it, the routed experts'
+  SwiGLU clamped at `swiglu_limit` 10, and two dense-GEMM tuner knobs;
+- fourteen build-time patches.
+
+Correctness:
+- Assistant-token KL to the official reference went from **0.1033 to 0.00828** (floors 0.0081 / 0.0067).
+- Expert sets matching the reference went from 0/96 to 96/96.
+- Correct routing costs **+11 % / +20 %** decode step at one / four streams.
+
+Production settings:
+- `gpu-memory-utilization` 0.84 (KV 6,188,010). At 0.85 the head fell to 882 MiB free under sixteen large
+  images.
+- `disable_eagle_block_drop`: an agent's follow-up turn reaches its first token in 1.24 s instead of 2.34 s.
+- Draft length 7 at one running request and 3 at two or more: +10.7 / +15.6 / +7.1 % at 2 / 4 / 5 users,
+  mathematics −12…−17 %.
+- `index_topk` 2048; 16 images and 4 videos per request.
+
+Operations:
+- Autostart in 274 s.
+- A watchdog that reboots all three nodes together.
+- An eight-hour soak: 7,515 requests, 0 errors.
+
+Rejected: the drafted XQA CUDA graph (−2.56 % / −1.35 % step for −6.3 % KV pool).
+
+New measurement rule: reboot before every arm. GB10 bandwidth falls 6.6–10.4 % after ten engine sessions, and
+only a reboot restores it.
+
+Recorded here for the first time:
+- the 3 October audit's four upstream correctness bugs on the old stack: R1 #54076, R2 #57477, R3 #58454,
+  FlashKDA #58846;
+- the old stack's quiet 4 October return to `index_topk` 2048.
+
+Corrected: the 8 October notice's noise floor (0.0094 for the old build, so the gap is 11×, not 13×). That
+notice moved to [docs/11](docs/11-open-issues.md) §1.15, because it had been numbered §1.12 twice.
+
+Still open:
+- quality benchmarks on the corrected build;
+- the long-session replay of issue #7;
+- the two-node track, which is still on the old stack.
+
 ## 8 October 2026 — correctness notice: the MoE router bias was never loaded
 
 `cuda-exl3` up to `754421f` silently drops the router's `e_score_correction_bias`; every configuration in
@@ -19,7 +66,7 @@ reference at 96/96 sampled positions, assistant-token KL 0.103 against a 0.0081 
 [`NNNtrance/cuda-exl3` @ `004e9f8`](https://github.com/NNNtrance/cuda-exl3/commit/004e9f8d9840bb4c10b58ada929af6a047120f50),
 offered upstream as [Zeuss5/cuda-exl3#8](https://github.com/Zeuss5/cuda-exl3/pull/8). All quality figures
 are withdrawn until re-measured; speed figures are not comparable (correct routing: decode steps 11–20 %
-longer). See the notice at the top of the [README](README.md) and [docs/11](docs/11-open-issues.md) §1.12.
+longer). See the notice at the top of the [README](README.md) and [docs/11](docs/11-open-issues.md) §1.15.
 
 ## 13 September 2026 — concurrency physics at agent workloads; the copy-slip residual bounded
 

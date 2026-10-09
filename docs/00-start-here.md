@@ -11,8 +11,8 @@ the other pages apply to you.
 | You have | Go to | What you get |
 |---|---|---|
 | **1 DGX Spark** | §1 below | No serving recipe. A useful amount of everything else: the image build, the kernel fixes, the measurement protocol and the failure index |
-| **2 DGX Spark** | **[15 — the TP=2 track](15-tp2-track.md)** | A *shorter* recipe than the three-node one: at two ranks nothing needs padding |
-| **3 DGX Spark** | **[the README quick start](../README.md)**, then [03](03-tp3-padding-and-sidecars.md) and [13](13-full-scope-checkpoint.md) | The production recipe this repository was built around |
+| **2 DGX Spark** | **[15 — the TP=2 track](15-tp2-track.md)** | A *shorter* recipe than the three-node one: at two ranks nothing needs padding. **Still on the old stack, whose `cuda-exl3` build never loads the MoE router bias** — see the README notice before using it |
+| **3 DGX Spark** | **[`tracks/tp3-main/`](../tracks/tp3-main/README.md)** and **[20 — the vLLM-`main` stack](20-main-stack.md)**, then [03](03-tp3-padding-and-sidecars.md) and [13](13-full-scope-checkpoint.md) | The production recipe, on upstream vLLM `main` with the MoE router bias loaded (since 8 October 2026) |
 | **4 DGX Spark** | **[HELP-WANTED.md](../HELP-WANTED.md) §1** | Nothing measured. The padding and expert-parallel arithmetic, the cabling problem, and what we would want reported `[not tested]` |
 
 Everything below the engine — the kernel patches, the transport plugin, the loader, the measurement

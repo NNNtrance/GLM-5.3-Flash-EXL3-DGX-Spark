@@ -1,67 +1,137 @@
-# GLM-5.3-Flash (EXL3 4bpw) on NVIDIA DGX Spark — two- and three-node recipes (vLLM + cuda-exl3)
+# GLM-5.3-Flash (EXL3 4bpw) on NVIDIA DGX Spark — three-node production on vLLM `main` (+ the earlier two- and three-node tracks)
 
-> **Most recipes stop at the flags. This one goes below the engine.** When three nodes ran slower
-> than two, we did not swap a setting — we found the kernel dispatch bug behind it, together with the
-> `cuda-exl3` author, and it is fixed upstream. We carry our own patch in the MoE combine kernel, we
-> patched the NCCL transport plugin so the second cable on every ConnectX-7 carries traffic, we built
-> the loading path that puts a **fully quantized** checkpoint into dimensions vLLM had padded (its
-> kernel side written by the author to our specification), we found the page counter that was
-> hiding 45 % of the KV pool, and we turned a vision tower back on that our own recipe said could not
-> run at three ranks — which meant finding the upstream frame-sampler mismatch that had been killing
-> the engine core on the first video request. Every change was measured on the hardware, and every number we got wrong
-> is withdrawn in public. Assembling a working cluster from other people's parts is where this work
-> starts, not where it ends.
+> **Most recipes stop at the flags. This one goes below the engine.**
+> - **The router bias.** Every quality gate we had passed, and we still compared the engine's token
+>   probabilities with the checkpoint author's own implementation. That is how we found that the kernel
+>   plugin never loaded the MoE router's bias: every expert choice the old stack made was the wrong one, and
+>   no gate could see it. The fix is in our fork, behind a boot gate that refuses to start without the bias.
+> - **The three-node dispatch bug.** When three nodes ran slower than two, we did not swap a setting: we
+>   found the kernel dispatch bug behind it, together with the `cuda-exl3` author, and it is fixed upstream.
+> - **The second cable.** We patched the NCCL transport plugin so the second cable on every ConnectX-7
+>   carries traffic.
+> - **The padded loading path.** We built the path that puts a **fully quantized** checkpoint into
+>   dimensions vLLM had padded; its kernel side was written by the author to our specification.
+> - **The KV pool.** We found the page counter that was hiding 45 % of it.
+> - **The vision tower.** We turned it back on at three ranks.
+>
+> Every change was measured on the hardware, and every number we got wrong is withdrawn in public —
+> including, on 8 October 2026, every quality figure the old stack ever published.
 
-> **Status: release.** Numbers, flags and patches are current as of **7 September 2026** and describe
-> **production configuration 13** — configuration 12 with the **vision tower on**, which is what our
-> three nodes serve, start at boot and were rebooted into as a whole cluster with the gates read
-> afterwards. Configuration 12 is configuration 11 at `gpu-memory-utilization` 0.88 with the
-> sparse-indexer K-gather workspace bound to its real ceiling, and every speed, pool and quality
-> figure below is measured on it and holds on 13 — the tower is not on the decode path and the three
-> vision boots land inside configuration 12's own boot-to-boot spread
-> ([docs/18](docs/18-vision-at-three-ranks.md)). Every analysis section is configuration 9's and
-> applies unchanged, because 9 through 13 differ by a memory fraction, two guard patches, one buffer
-> size and the tower. The stack is still moving and this file is overwritten in place when it does.
-> Sections marked *open* in [docs/11-open-issues.md](docs/11-open-issues.md) are the honest edge of
-> what we know; [docs/11 §1](docs/11-open-issues.md) is what we published and then had to withdraw,
-> and [audit/](audit/README.md) §6 indexes it. **Read the retractions before you quote a number.**
+> **Status: release, 9 October 2026.** The three nodes serve production from the **vLLM-`main` stack**:
+> - upstream vLLM `main` @ `21d93d0d8`;
+> - our `cuda-exl3` fork
+>   ([`NNNtrance/cuda-exl3`](https://github.com/NNNtrance/cuda-exl3/tree/tp3-vllm-main), branch
+>   `tp3-vllm-main`, build `448f1d6`);
+> - fourteen build-time patches.
+>
+> Where to read it:
+> - the files to run it: [`tracks/tp3-main/`](tracks/tp3-main/README.md);
+> - why we rebuilt and what each setting cost: [docs/20](docs/20-main-stack.md);
+> - the measurements: [`results/main-stack/`](results/main-stack/README.md).
+>
+> Everything under **[Legacy](#legacy--the-old-stack-configurations-113-until-8-october-2026)** below, and most
+> of `docs/02`–`docs/19`, describes the old stack. It is still accurate as engineering, but it was measured
+> with the router bias missing: its quality figures are withdrawn and its speeds are not a baseline for the
+> new one. The stack is still moving and this file is overwritten in place when it does.
+> **Read the retractions ([docs/11](docs/11-open-issues.md) §1) before you quote a number.**
 
-> **⚠ Correctness notice — 8 October 2026. Every configuration in this repository selects the wrong MoE experts.**
-> The `cuda-exl3` plugin build this recipe installs (commit `754421f` and earlier upstream) never loads the
-> router's load-balancing bias, `e_score_correction_bias`. `Exl3MoEMethod.create_weights` installs its own
-> weight loader on every direct parameter of the MoE layer — including the router bias that vLLM registers
-> there — and that loader silently declines a tensor without expert arguments. The bias stays at zero, and
-> vLLM's missing-weight check is off for quantized checkpoints, so nothing reports it.
-> - **Measured against the reference implementation** (exllamav3 1.5.4, same checkpoint): the engine's
->   top-8 expert set differed from the reference at **96 of 96** sampled positions (about 3 of 8 experts in
->   common), and assistant-token KL to the reference was **0.103** against an engine repeat-noise floor of
->   **0.0081**. With the bias loaded: KL **0.0084** (at the floor), perplexity 2.222 against the reference's
->   2.224, expert sets matching 96/96 `[measured-here]`.
-> - **Fix:** [`NNNtrance/cuda-exl3` @ `004e9f8`](https://github.com/NNNtrance/cuda-exl3/commit/004e9f8d9840bb4c10b58ada929af6a047120f50)
->   (branch `fix/moe-create-weights-scope`): the loader goes only on the plugin's own parameters. Offered
->   upstream as [Zeuss5/cuda-exl3#8](https://github.com/Zeuss5/cuda-exl3/pull/8); this recipe will point at
->   our fork from now on rather than wait for it.
-> - **What it means for the numbers below:** every quality figure in this repository (gates, GSM8K, IFEval,
->   MMLU, tool-eval-bench, needle) was measured on the broken routing and is **withdrawn until re-measured**.
->   Speed figures are not comparable either: correct routing reads 28–38 % more distinct experts per rank and
->   layer, and decode steps measured **11 % (one stream) to 20 % (four streams) longer** `[measured-here]`.
-> - A rewrite on current vLLM `main` with the fix built in, a boot gate that refuses to start without the
->   bias, and the measurements redone is being validated now and will replace this page.
+> **Correctness notice — 8 October 2026; resolved for the three-node track on 8–9 October.**
+> - **What was wrong.** Every configuration up to 13 picked the wrong MoE experts. The `cuda-exl3` plugin
+>   build those configurations install (commit `754421f` and earlier upstream) never loads the router's
+>   load-balancing bias, `e_score_correction_bias`. `Exl3MoEMethod.create_weights` put its own weight
+>   loader on every direct parameter of the MoE layer, the router bias included, and that loader silently
+>   declines a tensor without expert arguments. The bias stays at zero, and vLLM's missing-weight check is
+>   off for quantized checkpoints.
+> - **Measured against the reference implementation** (exllamav3 1.5.4, same checkpoint):
+>   - top-8 expert sets differed at **96 of 96** sampled positions;
+>   - assistant-token KL was **0.1033**, against that build's own repeat-noise floor of **0.0094** and a
+>     reference-jitter floor of 0.0067;
+>   - with the bias loaded, KL is **0.00841** (0.00828 on the production build), perplexity 2.222 against
+>     the reference's 2.224, and expert sets match 96/96 `[measured-here]`.
+> - **Resolved for three nodes.** Production runs the [vLLM-`main` track](tracks/tp3-main/README.md) on our
+>   fork. That fork loads the bias and logs `[HAREM-MOE-KAPI]` for each of the 42 MoE layers on every rank,
+>   or refuses to boot. The two-line fix against the old plugin is
+>   [`NNNtrance/cuda-exl3` @ `004e9f8`](https://github.com/NNNtrance/cuda-exl3/commit/004e9f8d9840bb4c10b58ada929af6a047120f50)
+>   (offered upstream as [Zeuss5/cuda-exl3#8](https://github.com/Zeuss5/cuda-exl3/pull/8)).
+> - **Still withdrawn:**
+>   - every quality benchmark in this repository (gates, GSM8K, IFEval, MMLU, tool-eval-bench, the needle),
+>     until re-measured on a corrected build `[not tested]`;
+>   - every speed figure of the old stack, as a basis for comparison: correct routing reads 28–38 % more
+>     distinct experts, and decode steps are **11 % (one stream) to 20 % (four streams) longer**
+>     `[measured-here]`.
+> - **Not resolved for two nodes.** The TP=2 track still runs the old stack. Building its image with the
+>   fork commit above is the obvious fix, and it has not been tried `[not tested]`.
+> - Details: [docs/11](docs/11-open-issues.md) §1.15, [docs/20](docs/20-main-stack.md) §1.
 
 ## How many nodes do you have?
 
-One question decides which half of this repository is yours, and
-**[docs/00 — Start here](docs/00-start-here.md)** answers it in a page. Every `docs/NN` page carries
-an **Applies to** badge on its first line, and [`tracks/`](tracks/README.md) holds the files that
-differ between the two arrangements — the environment templates, the patch trees and the autostart
-units — so they cannot be mixed by accident.
+[docs/00 — Start here](docs/00-start-here.md) answers it in a page. [`tracks/`](tracks/README.md) holds the
+files that differ between arrangements, so that they cannot be mixed by accident.
 
 | You have | What this repository gives you |
 |---|---|
-| **3 DGX Spark** | The **TP=3 track**: the production recipe, the quick start below, [`tracks/tp3`](tracks/tp3/README.md) |
-| **2 DGX Spark** | The **TP=2 track**: [docs/15](docs/15-tp2-track.md) and [`tracks/tp2`](tracks/tp2/README.md). At two ranks nothing needs padding, so it is a *shorter* recipe — eighteen patch files against twenty-three — rather than a cut-down one. Since 8 September it carries everything the three-node track does: the vision tower ([docs/19](docs/19-vision-at-two-ranks.md)) and both upstream backports |
-| **1 DGX Spark** | No serving recipe: 153.8 GiB of weights against 121.6 GiB of unified memory. Still yours — the image build, the GB10 kernel fixes, the measurement protocol, the model-free benches and the failure index. [docs/00 §1](docs/00-start-here.md) |
+| **3 DGX Spark** | **The vLLM-`main` track, production since 8 October 2026:** [`tracks/tp3-main`](tracks/tp3-main/README.md), [docs/20](docs/20-main-stack.md). The old three-node track ([`tracks/tp3`](tracks/tp3/README.md)) is kept as the record; do not deploy it |
+| **2 DGX Spark** | The TP=2 track: [docs/15](docs/15-tp2-track.md) and [`tracks/tp2`](tracks/tp2/README.md) — **still on the old stack, router bias missing** (see the notice above) |
+| **1 DGX Spark** | No serving recipe: 153.8 GiB of weights against 121.6 GiB of unified memory. Still yours: the image build, the GB10 kernel fixes, the measurement protocol, the model-free benches and the failure index. [docs/00 §1](docs/00-start-here.md) |
 | **4 DGX Spark** | Nothing measured `[not tested]`. The padding and expert-parallel arithmetic, the cabling problem and what we would want reported are in [HELP-WANTED.md](HELP-WANTED.md) §1 |
+
+### Three nodes — production on vLLM `main` (since 8 October 2026)
+
+**Settings.** TP=3 + expert parallelism; `turboderp/GLM-5.3-Flash-exl3` 4.05 bpw, full scope; fp8 KV; block 256;
+`gpu-memory-utilization` 0.84; `max-model-len` 1,000,000; `max-num-seqs` 5; `max-num-batched-tokens` 2048;
+`index_topk` 2048. DFlash2 draft at k=7, with `disable_eagle_block_drop` and the draft-length schedule
+`[[1,1,7],[2,8,3]]`. Vision 16 images and 4 videos per request. Reasoning effort `low` unless stated.
+
+Several speed rows below were measured on the bias-fix build at `gpu-memory-utilization` 0.75 before the
+production settings were chosen; each row names its build. The full settings for every row are in
+[`results/main-stack/`](results/main-stack/README.md).
+
+| | |
+|---|---|
+| **Does the engine compute the model?** | assistant-token KL to the official reference **0.00828** (repeat floor 0.0081, reference jitter 0.0067); expert sets 96/96; perplexity 2.222 vs 2.224 — production build, 8 October `[measured-here]` ([kl-health](results/main-stack/kl-health.md)) |
+| Single-stream decode by content, per stream | code **59.0**, mathematics **70.3**, tool-call JSON **48.2**, English prose **35.1**, short Turkish **22.5** tok/s; draft acceptance 51 / 67 / 41 / 24 / 10 % — bias-fix build, gmu 0.75, k=7, 7 October `[measured-here]` ([speed-map](results/main-stack/speed-map.md) §2) |
+| Aggregate decode, 12 short code prompts (`hizset-v2`) | C1 **64.3**, C4 **120.1**, C5 **133.3** tok/s, k=7 for every user — bias-fix build, gmu 0.75, 7 October `[measured-here]` ([speed-map](results/main-stack/speed-map.md) §4) |
+| Draft length by running requests (production) | four-user step **160.2 → 114.5 ms**; pooled output **+10.7 / +15.6 / +7.1 %** at 2 / 4 / 5 users, one user unchanged; prose and Turkish +25–34 %, **mathematics −12…−17 %** `[measured-here]` ([draft-schedule](results/main-stack/draft-schedule.md)) |
+| Agent follow-up turns (production) | first token **2.34 → 1.24 s** serial and **7.25 → 3.83 s** with five sessions at once; tokens re-read −61 %; no cost found `[measured-here, private harness]` ([prefix-hits-nodrop](results/main-stack/prefix-hits-nodrop.md)) |
+| Cold prefill | **1,809–1,816** tok/s at 32k tokens, **1,791** at 90k — bias-fix build `[measured-here, private harness]` |
+| KV pool at `max_model_len` 1,000,000 | **6,188,010** tokens at 0.84. At 0.85 the head fell to 882 MiB free under sixteen large images and the safety line stopped the engine `[measured-here, private harness]` ([memory-fraction-084](results/main-stack/memory-fraction-084.md)) |
+| Boot from power-on, all three nodes, autostart unit | `/health` 200 at **274 s**; a killed engine came back unattended in **8.2 min** through the optional watchdog `[measured-here, private harness]` ([boot-and-watchdog](results/main-stack/boot-and-watchdog.md)) |
+| Eight-hour soak, five concurrent, mixed with images and ~100k documents | **7,515 requests, 0 errors**; never restarted; free-memory floors 4.67 / 6.93 / 7.02 GiB; swap 0; speed by the hour 0.996–1.052 of the first `[measured-here, private harness]` ([soak-8h](results/main-stack/soak-8h.md)) |
+| Quality benchmarks | **not yet re-measured on the corrected build** `[not tested]` — the KL check above is the only quality evidence for this stack ([quality-gates](results/main-stack/quality-gates.md)) |
+
+**What it cost.**
+- Correct routing makes decode steps 11–20 % longer; the aggregate a user sees falls about 5 % at one
+  stream and 12 % at four.
+- The draft schedule makes mathematics 12–17 % slower at two or more users.
+- 0.84 instead of 0.85 costs 2.6 % of the pool.
+- Tried and rejected: a drafted CUDA graph (−2.56 % step for −6.3 % pool).
+- [docs/20](docs/20-main-stack.md) §4–§6.
+
+**Quick start:** [`tracks/tp3-main/README.md`](tracks/tp3-main/README.md) — ten steps, each ending in a check:
+pull the base image by digest, build, distribute, download at pinned revisions, derive each node's
+environment, build the sidecars, dump boot, fast boot, autostart, and optionally the watchdog. The hardware,
+firmware, fabric and mesh-plugin steps are unchanged; they are in the legacy quick start below
+([docs/00](docs/00-hardware-and-os.md), [docs/06](docs/06-nccl-mesh.md)).
+
+**One measurement rule changed.** On GB10, memory bandwidth falls 6.6–10.4 % after about ten engine
+starts on one boot, and only a reboot restores it. Every comparison on the new stack therefore reboots all
+three nodes before each arm ([bandwidth-fragmentation](results/main-stack/bandwidth-fragmentation.md)).
+
+---
+
+# Legacy — the old stack (configurations 1–13, until 8 October 2026)
+
+> **Everything from here to the end of this file describes the old stack**: the model-launch vLLM image,
+> `cuda-exl3` `754421f` and earlier, and the router bias never loaded. The engineering is real and most of
+> it carried over: padding, expert parallelism, fast boot, the mesh plugin, the KV pool and vision.
+> **The quality figures are withdrawn**, and the speed figures are not comparable with the new stack. Two
+> more things are recorded here for the first time:
+> - between 13 September and 8 October this stack also received four upstream correctness fixes (R1–R3 and
+>   FlashKDA);
+> - on 4 October it returned to `index_topk` 2048.
+>
+> Neither was published at the time ([docs/20](docs/20-main-stack.md) §2). The headings keep their old
+> names.
 
 ### Three nodes — production configuration 12
 
@@ -150,7 +220,7 @@ than twenty-three, and four of the eighteen are the three-node track's files use
 > of these strings are matched exactly by the patch scripts, which fail closed when an anchor stops
 > matching.
 
-## Headline results
+## Legacy — headline results
 
 The two at-a-glance tables are above, under [How many nodes do you have?](#how-many-nodes-do-you-have)
 This section is the three-node track in full: what each configuration changed, what it cost, and the
@@ -469,7 +539,7 @@ two-node pool is 601,562 tokens and a **6,253-token prompt is never scheduled at
 sits at `Running: 0, Waiting: 1, GPU KV cache usage: 0.0 %` indefinitely, because one request wants
 640 of the pool's 385 blocks ([docs/15](docs/15-tp2-track.md) §4).
 
-## Read in this order
+## Legacy — read in this order
 
 0. [**00 — Start here**](docs/00-start-here.md) — **one page, one question: how many nodes do you have.** What still applies at one node and what does not, which track two and three go to, what a fourth node would change, and the table of which of the twenty documents belongs to which track. Read it first if you are not sure this repository is about your hardware.
 1. [00 — Hardware, firmware and OS](docs/00-hardware-and-os.md) — **the complete environment record.** Three Sparks and their firmware, the ring cabling and what the fabric ceiling really is, every version we ran, the hotplug fix that stops a single-node reboot killing the fabric, the six OS-level changes we made and the three we deliberately did not, and the memory rules. Read it even if you think you know this layer.
@@ -499,7 +569,7 @@ sits at `Running: 0, Waiting: 1, GPU KV cache usage: 0.0 %` indefinitely, becaus
 25. [**HELP-WANTED.md**](HELP-WANTED.md) — **what a second cluster could settle, ranked, with the expected effort on every item.** Four nodes, a two-node reboot test, the memory ladder at two ranks, other checkpoints, the mesh plugin's small-message latency floor, the KDA state slots, the KDA GEMM gap, a one-bench falsification of a kernel closure that was corrected the day it was measured, an upstream vLLM issue we measured and confirmed on someone else's thread rather than duplicating, a second one we filed ourselves (the CUDA-graph support gate at three ranks, [vllm#55581](https://github.com/vllm-project/vllm/issues/55581)), and the four largest items from docs/11. It also says, per item, what a contributor with fewer nodes can and cannot check.
 26. [CREDITS](CREDITS.md) · [LICENSES](LICENSES.md) · [CHANGELOG](CHANGELOG.md) · [CONTRIBUTING](CONTRIBUTING.md) · [STYLE-GUIDE](STYLE-GUIDE.md) · [`.github/`](.github/) — three issue templates and a pull request template, all of them the measurement protocol in [docs/09](docs/09-measurement-protocol.md) turned into checklists
 
-## The four figures
+## Legacy — the four figures
 
 | | |
 |---|---|
@@ -508,7 +578,7 @@ sits at `Running: 0, Waiting: 1, GPU KV cache usage: 0.0 %` indefinitely, becaus
 | [Where a step actually goes](charts/step-breakdown-prod9.svg) | production 9, profiled on the live server, prefill and both decode regimes |
 | [The one number production 9 was built to move](charts/dense-stage-prod7-vs-prod9.svg) | the dense stage, 45.3 % → 25.9 % of a single-stream step |
 
-## Quick start — eleven steps and one optional, for a person or their AI coding agent
+## Legacy — Quick start — eleven steps and one optional, for a person or their AI coding agent
 
 Each step ends in a **check**. Do not go on until it passes: on this stack the expensive failures are
 the silent ones, and every check below exists because something got past us once.
